@@ -2,7 +2,7 @@
 
 """Setup DB using questdb-8.3.1-rt-windows-x86-64"""
 
-import app.logger as logger
+import logger
 
 import logging
 import os
@@ -15,27 +15,43 @@ from os.path import dirname, abspath
 LOG_ONLY_TO_TERMINAL = False
 # Working directory
 WORKING_DIR = dirname(dirname(abspath(__file__)))
+# SQLite DB path
+SQLITE_DB_PATH = WORKING_DIR + "/db/sqlite.db"
+# Path to file containing SQL commands to create QuestDB
+SETUP_QUESTDB_SCRIPT_PATH = WORKING_DIR + "/db/questdb.sql"
+# Path to file containing SQL commands to create SQLite DB
+SETUP_SQLITE_DB_SCRIPT_PATH = WORKING_DIR + "/db/sqlite.sql"
 
 # QuestDB password
-DB_PASSWORD = 'quest'
+QUESTDB_PASSWORD = "quest"
 # Config string PostgreSQL
-CONF_PSYCOPG = 'user=admin password={0} host=127.0.0.1 port=8812 dbname=qdb'.format(DB_PASSWORD)
+QUESTDB_CONF_PSYCOPG = "user=admin password={0} host=127.0.0.1 port=8812 dbname=qdb".format(QUESTDB_PASSWORD)
+
+# EOD meta data table name
+DB_TABLE_NAME_SYMBOL_META = "symbol_meta"
+# EOD OHLCV table name
+DB_TABLE_NAME_EOD_PRICE = "daily_ohlcv"
+# Intraday OHLCV table name
+DB_TABLE_NAME_MINUTE_PRICE = "minute_ohlcv"
+# Dummy symbol and exchange
+DUMMY_SYMBOL_CODE   = "DUMMY_SYMBOL"
+DUMMY_EXCHANGE_CODE = "DUMMY_EXCHANGE"
 
 def setup_questdb():
     """Sets up tables, indices, etc. for QuestDB."""
 
     logging.info("Setup QuestDB")
     # Connect to an existing QuestDB instance
-    with pg.connect(CONF_PSYCOPG, autocommit=True) as connection:
+    with pg.connect(QUESTDB_CONF_PSYCOPG, autocommit=True) as connection:
         # Open a cursor to perform database operations
         with connection.cursor() as cur:
-            logging.info('Start setting up tables')
+            logging.info("Start setting up tables")
             # Reads sql statements to set up DB
-            with open(os.getcwd() + '/db/questdb.sql', 'r') as file:
+            with open(SETUP_QUESTDB_SCRIPT_PATH, "r") as file:
                 sql_commands = file.read()
             # Sets up DB
             cur.execute(sql_commands)
-            logging.info('Tables created\n')
+            logging.info("Tables created\n")
 
 def setup_sqlite():
     """Sets up tables, indices, etc. for SQLite."""
@@ -43,26 +59,15 @@ def setup_sqlite():
     logging.info("Setup SQLite")
 
     # Connect / Create SQLite DB
-    connection = sqlite3.connect(os.getcwd() +  "/db/sqlite.db")
+    connection = sqlite3.connect(SQLITE_DB_PATH)
     cursor = connection.cursor()
-    with open(os.getcwd() + '/db/sqlite.sql', 'r') as file:
+    with open(SETUP_SQLITE_DB_SCRIPT_PATH, "r") as file:
         sql_commands = file.read()
-    logging.info('Start setting up tables')
+    logging.info("Start setting up tables")
     cursor.executescript(sql_commands)
     connection.commit()
-    logging.info('Tables created')
+    logging.info("Tables created")
 
-    logging.info("Inserts test data\n")
-    cursor.execute("""INSERT INTO symbol_meta (code, time_frame, symbol_status, name, country, exchange, currency, 
-                      type, isin) VALUES("test_code", "DAILY", "ACTIVE", "test_name", "test_country", 
-                      "test_exchange", "test_currency", "test_type", "test_isin")""")
-    connection.commit()
-    """df = pd.read_sql("SELECT * FROM symbol_meta", connection)
-    df.at[0, "code"] = "Yes"
-    df.at[1, "code"] = "No"
-    df.to_sql("symbol_meta", connection, if_exists="append", index=False)
-    connection.commit()
-    df = pd.read_sql_query("SELECT * FROM symbol_meta", connection)"""
     connection.close()
 
 def setup_script():
@@ -76,7 +81,15 @@ def setup_script():
     logging.info("Start {0}".format(name_of_this_file))
     logging.info("Current working directory: {0}".format(os.getcwd()))
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    # Sets up logger, etc.
     setup_script()
-    setup_questdb()
-    setup_sqlite()
+    # Checks if user wants to proceed
+    logging.warning("Do you want to continue? If DBs already exist, they will be deleted! (yes/y): ")
+    user_input = input("")
+    if user_input.lower() in ["yes", "y"]:
+        logging.info("Answer is '{0}', continue setting up DBs...".format(user_input.lower()))
+        #setup_questdb()
+        #setup_sqlite()
+    else:
+        logging.info("Answer is '{0}', exiting...".format(user_input.lower()))

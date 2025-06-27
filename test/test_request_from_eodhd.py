@@ -2,9 +2,11 @@
 
 """Unit tests for request_eodhd.py"""
 
-import app.request_eodhd as request_eodhd
+import request_eodhd
 
-from app.db import CONF_PSYCOPG
+from db import (QUESTDB_CONF_PSYCOPG,
+                SQLITE_DB_PATH,
+                DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE)
 
 import os
 import pandas  as pd
@@ -22,14 +24,41 @@ from os.path            import dirname, abspath
 SQL_SELECT_SYMBOL_FROM_DAILY_OHLCV = "SELECT close FROM daily_ohlcv WHERE timestamp = %s"
 # Query to select price data from table daily_ohlcv
 SQL_SELECT_SYMBOL_FROM_MINUTE_OHLCV = "SELECT close FROM minute_ohlcv WHERE timestamp = %s"
+# SQL command to insert test record in table symbol_meta
+SQL_CODE_INSERT_DUMMY_SYMBOL_INTO_SYMBOL_META = \
+    """INSERT INTO symbol_meta (symbol_code, exchange_code, time_frame, symbol_status, name, country, currency, type, 
+       isin) VALUES("{0}", "{1}", "DAILY", "ACTIVE", "test_name", "test_country", "test_currency", "test_type", 
+       "test_isin")""".format(DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE)
 # Query to select symbol from table symbol_meta
-SQL_SELECT_SYMBOL_FROM_SYMBOL_META = """SELECT code FROM symbol_meta WHERE code=:code AND time_frame=:time_frame AND 
+SQL_SELECT_SYMBOL_FROM_SYMBOL_META = """SELECT symbol_code FROM symbol_meta WHERE symbol_code=:symbol_code AND 
+                                        exchange_code=:exchange_code AND time_frame=:time_frame AND 
                                         symbol_status=:symbol_status AND name=:name"""
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def setup_test():
+    """Sets up test environment"""
     os.chdir(dirname(dirname(abspath(__file__))))
     yield
+
+@pytest.fixture()
+def setup_and_cleanup_sqlite():
+    """Inserts dummy data into SQLite DB"""
+    # Connect / Create SQLite DB
+    connection = sqlite3.connect(SQLITE_DB_PATH)
+    cursor = connection.cursor()
+
+    # Inserts dummy data
+    cursor.execute("DELETE FROM symbol_meta WHERE symbol_code = ?", (DUMMY_SYMBOL_CODE,))
+    cursor.execute(SQL_CODE_INSERT_DUMMY_SYMBOL_INTO_SYMBOL_META)
+    connection.commit()
+
+    # Runs test
+    yield
+
+    # Cleans up
+    cursor.execute("DELETE FROM symbol_meta WHERE symbol_code = ?", (DUMMY_SYMBOL_CODE,))
+    connection.commit()
+    connection.close()
 
 @pytest.mark.api
 @pytest.mark.parametrize("time_frame", [request_eodhd.TimeFrame.DAILY, request_eodhd.TimeFrame.MINUTE])
@@ -97,27 +126,30 @@ def test_request_price_data_from_eodhd(setup_test: Callable, time_frame: request
         assert (df.shape[0] > 0)
 
 @pytest.mark.db
-def test_is_symbol_already_in_db_true(setup_test: Callable):
+def test_is_symbol_already_in_db_true(setup_test: Callable, setup_and_cleanup_sqlite: Callable):
     time_frame = request_eodhd.TimeFrame.DAILY
     symbol_status = request_eodhd.SymbolStatus.ACTIVE
 
-    is_symbol_already_in_db = request_eodhd.is_symbol_already_in_db("test_code", time_frame, symbol_status,
-                                                                         "test_name")
+    is_symbol_already_in_db = request_eodhd.is_symbol_already_in_db(DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE, time_frame,
+                                                                    symbol_status, "test_name")
     assert is_symbol_already_in_db == True
 
 @pytest.mark.db
-def test_is_symbol_already_in_db_false(setup_test: Callable):
+def test_is_symbol_already_in_db_false(setup_test: Callable, setup_and_cleanup_sqlite: Callable):
+    symbol_code = "test_code_XYZ"
     time_frame = request_eodhd.TimeFrame.DAILY
     symbol_status = request_eodhd.SymbolStatus.ACTIVE
 
-    is_symbol_already_in_db = request_eodhd.is_symbol_already_in_db("test_code_XYZ", time_frame, symbol_status,
-                                                                         "test_name")
+    assert "test_code_XYZ" != DUMMY_SYMBOL_CODE
+
+    is_symbol_already_in_db = request_eodhd.is_symbol_already_in_db(symbol_code, DUMMY_EXCHANGE_CODE, time_frame,
+                                                                    symbol_status, "test_name")
     assert is_symbol_already_in_db == False
 
 @pytest.mark.db
 @pytest.mark.parametrize("time_frame", [request_eodhd.TimeFrame.DAILY, request_eodhd.TimeFrame.MINUTE])
 def test_insert_price_data(setup_test: Callable, time_frame: request_eodhd.TimeFrame):
-    symbol_code = "DSCHOOONAS"
+    symbol_status = request_eodhd.SymbolStatus.ACTIVE
     if time_frame == request_eodhd.TimeFrame.DAILY:
         timestamp = datetime.now()
     else:
@@ -125,8 +157,8 @@ def test_insert_price_data(setup_test: Callable, time_frame: request_eodhd.TimeF
 
     if time_frame == request_eodhd.TimeFrame.DAILY:
         data = {'datetime': [timestamp],
-               'exchange_code': ["NASDAQ"],
-               'symbol_code': [symbol_code],
+               'exchange_code': [DUMMY_EXCHANGE_CODE],
+               'symbol_code': [DUMMY_SYMBOL_CODE],
                'open': [1.0],
                'high': [1.0],
                'low': [1.0],
@@ -135,8 +167,8 @@ def test_insert_price_data(setup_test: Callable, time_frame: request_eodhd.TimeF
                'volume': [1]}
     else:
         data = {'timestamp': [timestamp],
-                'exchange_code': ["NASDAQ"],
-                'symbol_code': [symbol_code],
+                'exchange_code': [DUMMY_EXCHANGE_CODE],
+                'symbol_code': [DUMMY_SYMBOL_CODE],
                 'gmt_offset': [0],
                 'open': [1.0],
                 'high': [1.0],
@@ -145,10 +177,10 @@ def test_insert_price_data(setup_test: Callable, time_frame: request_eodhd.TimeF
                 'volume': [1]}
     df_eod = pd.DataFrame(data)
 
-    request_eodhd.insert_price_data(df_eod, time_frame, symbol_code)
+    request_eodhd.insert_price_data(df_eod, DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE, time_frame, symbol_status)
 
-    time.sleep(0.1)
-    with pg.connect(CONF_PSYCOPG, autocommit=True) as connection:
+    time.sleep(0.5)
+    with pg.connect(QUESTDB_CONF_PSYCOPG, autocommit=True) as connection:
         # Open a cursor to perform database operations
         with connection.cursor() as cur:
             if time_frame == request_eodhd.TimeFrame.DAILY:
@@ -162,32 +194,25 @@ def test_insert_price_data(setup_test: Callable, time_frame: request_eodhd.TimeF
             assert len(rows) == 1
 
 @pytest.mark.db
-def test_insert_symbol_meta_data(setup_test: Callable):
-    symbol_code = "DSCHOOONAS"
-
-    def clean_table_symbol_meta(db_connection: sqlite3.Connection):
-        # Prepare
-        cursor = db_connection.cursor()
-        cursor.execute("DELETE FROM symbol_meta WHERE code = ?", (symbol_code,))
-        db_connection.commit()
+def test_insert_symbol_meta_data(setup_test: Callable, setup_and_cleanup_sqlite: Callable):
+    time_frame = request_eodhd.TimeFrame.DAILY
+    symbol_status = request_eodhd.SymbolStatus.ACTIVE
 
     # Inserts data
-    connection = sqlite3.connect(os.getcwd() + "/db/sqlite.db")
-    clean_table_symbol_meta(connection)
-    data_dict = {"code": symbol_code, "time_frame": "DAILY", "symbol_status": "ACTIVE", "name": "testo_name",
-                "country": "testo_country", "exchange": "testo_exchange", "currency": "testo_currency",
-                "type": "testo_type", "isin": "testo_isin"}
+    connection = sqlite3.connect(SQLITE_DB_PATH)
+    data_dict = {"symbol_code": DUMMY_SYMBOL_CODE, "time_frame": time_frame.name, "symbol_status": symbol_status.name,
+                 "name": "testo_name", "country": "testo_country", "exchange_code": DUMMY_EXCHANGE_CODE,
+                 "currency": "testo_currency", "type": "testo_type", "isin": "testo_isin"}
     row_exchange_symbol = pd.Series(data_dict)
-    request_eodhd.insert_symbol_meta_data(row_exchange_symbol, symbol_code)
-
+    request_eodhd.insert_symbol_meta_data(row_exchange_symbol, DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE, time_frame,
+                                          symbol_status)
+    time.sleep(0.1)
     # Queries data
-    connection = sqlite3.connect(os.getcwd() + "/db/sqlite.db")
     df_symbol_meta = pd.read_sql(SQL_SELECT_SYMBOL_FROM_SYMBOL_META, con=connection,
-                                 params={"code": symbol_code, "time_frame": "DAILY", "symbol_status": "ACTIVE",
+                                 params={"symbol_code": DUMMY_SYMBOL_CODE, "exchange_code": DUMMY_EXCHANGE_CODE,
+                                         "time_frame": time_frame.name, "symbol_status": symbol_status.name,
                                          "name": "testo_name"})
     assert df_symbol_meta.shape[0] > 0
-    assert df_symbol_meta.at[0, "code"] == symbol_code
+    assert df_symbol_meta.at[0, "symbol_code"] == DUMMY_SYMBOL_CODE
 
-    # Cleanup
-    clean_table_symbol_meta(connection)
     connection.close()

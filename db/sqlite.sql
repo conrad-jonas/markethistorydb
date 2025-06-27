@@ -1,15 +1,15 @@
 DROP TABLE IF EXISTS symbol_meta;
 
 CREATE TABLE symbol_meta (
-	code            TEXT,
+	symbol_code     TEXT,
+	exchange_code   TEXT,
 	time_frame      TEXT,
     symbol_status   TEXT,
     name            TEXT,
     country         TEXT,
-    exchange        TEXT,
     currency        TEXT,
     type            TEXT,
     isin            TEXT,
-    PRIMARY KEY (code, time_frame, symbol_status, name),
-    UNIQUE (code, time_frame, symbol_status, name)
+    PRIMARY KEY (symbol_code, exchange_code, time_frame, symbol_status, name),
+    UNIQUE (symbol_code, exchange_code, time_frame, symbol_status, name)
 );
