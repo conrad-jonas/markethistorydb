@@ -3,9 +3,9 @@
 """Requests trading data from eodhd.com and inserts it into DB"""
 
 import logger as logger
-from db import (QUESTDB_PASSWORD,
-                SQLITE_DB_PATH,
-                DB_TABLE_NAME_SYMBOL_META, DB_TABLE_NAME_EOD_PRICE, DB_TABLE_NAME_MINUTE_PRICE)
+from db_setup import (QUESTDB_PASSWORD,
+                      SQLITE_DB_PATH,
+                      DB_TABLE_NAME_SYMBOL_META, DB_TABLE_NAME_EOD_PRICE, DB_TABLE_NAME_MINUTE_PRICE)
 
 import functools
 import logging

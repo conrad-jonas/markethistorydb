@@ -4,9 +4,9 @@
 
 import request_eodhd
 
-from db import (QUESTDB_CONF_PSYCOPG,
-                SQLITE_DB_PATH,
-                DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE)
+from db_setup import (QUESTDB_CONF_PSYCOPG,
+                      SQLITE_DB_PATH,
+                      DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE)
 
 import os
 import pandas  as pd
