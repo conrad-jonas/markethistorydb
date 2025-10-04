@@ -2,10 +2,14 @@
 
 """Requests trading data from eodhd.com and inserts it into DB"""
 
-import logger as logger
-from db_setup import (QUESTDB_PASSWORD,
-                      SQLITE_DB_PATH,
-                      DB_TABLE_NAME_SYMBOL_META, DB_TABLE_NAME_EOD_PRICE, DB_TABLE_NAME_MINUTE_PRICE)
+from misc.constants  import (WORKING_DIR,
+                             LOG_ONLY_TO_TERMINAL)
+from misc.data_types import (TimeFrame,
+                             SymbolStatus)
+from misc            import logger
+from db.db_setup     import (QUESTDB_PASSWORD,
+                             SQLITE_DB_PATH,
+                             DB_TABLE_NAME_SYMBOL_META, DB_TABLE_NAME_EOD_PRICE, DB_TABLE_NAME_MINUTE_PRICE)
 
 import functools
 import logging
@@ -18,18 +22,13 @@ import time
 
 from collections.abc    import Callable
 from datetime           import datetime
-from enum               import Enum, IntEnum
+from enum               import IntEnum
 from json               import JSONDecodeError
-from os.path            import dirname, abspath
 from questdb.ingress    import Sender, IngressError
 from typing             import Any, Final
 
-# Bool whether to write only to terminal or also to log file
-LOG_ONLY_TO_TERMINAL = False
 # Minimum amount of free storage space on disk that is demanded before proceeding with downloading data
 MIN_FREE_SPACE_IN_GB = 100
-# Working directory
-WORKING_DIR = dirname(dirname(abspath(__file__)))
 
 # Time to wait after connection error to host occurred
 WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR = 10
@@ -68,16 +67,6 @@ class ApiErrorCode(IntEnum):
     NO_ACCESS_RIGHTS   = 403
     TICKER_NOT_FOUND   = 404
     BAD_GATEWAY        = 502
-
-class TimeFrame(Enum):
-    """Describes timeframe for trading data"""
-    DAILY  = 1
-    MINUTE = 2
-
-class SymbolStatus(Enum):
-    """Describes status of requested"""
-    ACTIVE   = 1
-    DELISTED = 2
 
 class StorageError(Exception):
     """Exception raised for API data volume being used up"""

@@ -2,11 +2,11 @@
 
 """Unit tests for request_eodhd.py"""
 
-import request_eodhd
-
-from db_setup import (QUESTDB_CONF_PSYCOPG,
-                      SQLITE_DB_PATH,
-                      DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE)
+from db.db_setup   import (QUESTDB_CONF_PSYCOPG,
+                           SQLITE_DB_PATH,
+                           DUMMY_SYMBOL_CODE,
+                           DUMMY_EXCHANGE_CODE)
+from request_data  import request_eodhd
 
 import os
 import pandas  as pd

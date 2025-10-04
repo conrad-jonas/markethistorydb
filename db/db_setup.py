@@ -2,19 +2,15 @@
 
 """Setup DB using questdb-8.3.1-rt-windows-x86-64"""
 
-import logger
+from misc.constants import (WORKING_DIR,
+                            LOG_ONLY_TO_TERMINAL)
+from misc           import logger
 
 import logging
 import os
 import psycopg as pg
 import sqlite3
 
-from os.path import dirname, abspath
-
-# Bool whether to write only to terminal or also to log file
-LOG_ONLY_TO_TERMINAL = False
-# Working directory
-WORKING_DIR = dirname(dirname(abspath(__file__)))
 # SQLite DB path
 SQLITE_DB_PATH = WORKING_DIR + "/db/sqlite.db"
 # Path to file containing SQL commands to create QuestDB
