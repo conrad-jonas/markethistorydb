@@ -2,40 +2,21 @@
 
 """Setup DB using questdb-8.3.1-rt-windows-x86-64"""
 
-import logger
+from misc.constants  import (WORKING_DIR,
+                             LOG_ONLY_TO_TERMINAL)
+from db.db_constants import (QUESTDB_CONF_PSYCOPG,
+                             SQLITE_DB_PATH)
+from misc import logger
 
 import logging
 import os
 import psycopg as pg
 import sqlite3
 
-from os.path import dirname, abspath
-
-# Bool whether to write only to terminal or also to log file
-LOG_ONLY_TO_TERMINAL = False
-# Working directory
-WORKING_DIR = dirname(dirname(abspath(__file__)))
-# SQLite DB path
-SQLITE_DB_PATH = WORKING_DIR + "/db/sqlite.db"
 # Path to file containing SQL commands to create QuestDB
 SETUP_QUESTDB_SCRIPT_PATH = WORKING_DIR + "/db/questdb.sql"
 # Path to file containing SQL commands to create SQLite DB
 SETUP_SQLITE_DB_SCRIPT_PATH = WORKING_DIR + "/db/sqlite.sql"
-
-# QuestDB password
-QUESTDB_PASSWORD = "quest"
-# Config string PostgreSQL
-QUESTDB_CONF_PSYCOPG = "user=admin password={0} host=127.0.0.1 port=8812 dbname=qdb".format(QUESTDB_PASSWORD)
-
-# EOD meta data table name
-DB_TABLE_NAME_SYMBOL_META = "symbol_meta"
-# EOD OHLCV table name
-DB_TABLE_NAME_EOD_PRICE = "daily_ohlcv"
-# Intraday OHLCV table name
-DB_TABLE_NAME_MINUTE_PRICE = "minute_ohlcv"
-# Dummy symbol and exchange
-DUMMY_SYMBOL_CODE   = "DUMMY_SYMBOL"
-DUMMY_EXCHANGE_CODE = "DUMMY_EXCHANGE"
 
 def setup_questdb():
     """Sets up tables, indices, etc. for QuestDB."""
@@ -89,7 +70,7 @@ if __name__ == "__main__":
     user_input = input("")
     if user_input.lower() in ["yes", "y"]:
         logging.info("Answer is '{0}', continue setting up DBs...".format(user_input.lower()))
-        #setup_questdb()
-        #setup_sqlite()
+        setup_questdb()
+        setup_sqlite()
     else:
         logging.info("Answer is '{0}', exiting...".format(user_input.lower()))

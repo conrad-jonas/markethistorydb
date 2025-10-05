@@ -2,10 +2,13 @@
 
 """Requests trading data from eodhd.com and inserts it into DB"""
 
-import logger as logger
-from db import (QUESTDB_PASSWORD,
-                SQLITE_DB_PATH,
-                DB_TABLE_NAME_SYMBOL_META, DB_TABLE_NAME_EOD_PRICE, DB_TABLE_NAME_MINUTE_PRICE)
+from misc.constants  import (WORKING_DIR,
+                             LOG_ONLY_TO_TERMINAL)
+from misc.data_types import (TimeFrame,
+                             SymbolStatus)
+from misc            import logger
+
+import db.db_access as db_access
 
 import functools
 import logging
@@ -13,39 +16,25 @@ import pandas as pd
 import os
 import requests
 import shutil
-import sqlite3
 import time
 
-from collections.abc    import Callable
-from datetime           import datetime
-from enum               import Enum, IntEnum
-from json               import JSONDecodeError
-from os.path            import dirname, abspath
-from questdb.ingress    import Sender, IngressError
-from typing             import Any, Final
+from collections.abc import Callable
+from datetime        import datetime
+from enum            import IntEnum
+from json            import JSONDecodeError
+from typing          import Any
 
-# Bool whether to write only to terminal or also to log file
-LOG_ONLY_TO_TERMINAL = False
 # Minimum amount of free storage space on disk that is demanded before proceeding with downloading data
 MIN_FREE_SPACE_IN_GB = 100
-# Working directory
-WORKING_DIR = dirname(dirname(abspath(__file__)))
-
+# Maximum number of retries after API connection error occurred
+MAX_RETRIES_AFTER_API_CONNECT_ERROR = 3
 # Time to wait after connection error to host occurred
 WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR = 10
 # Time to wait after API used up error
 WAIT_TIME_IN_SECS_AFTER_API_ERROR = 3600
-# Time to wait after connection error to host occurred
-WAIT_TIME_IN_SECS_AFTER_DB_ERROR = 10
-# Maximum number of retries after connection error occurred
-MAX_RETRIES_AFTER_CONNECT_ERROR = 3
-# Ticker not found error code that can occur during requesting
-TICKER_NOT_FOUND_STATUS_CODE = 404
 
 # API token for eodhd.com
 API_TOKEN = "YOUR_API_TOKEN"
-# Config string http
-QUESTDB_CONF_HTTP = "http::addr=localhost:9000;username=admin;password={0};".format(QUESTDB_PASSWORD)
 
 # Exchanges to download daily and intraday data from
 EXCHANGE_NAMES_EOD    = ["USA Stocks", "London Exchange", "Toronto Exchange", "XETRA Stock Exchange",
@@ -57,27 +46,13 @@ US_EXCHANGE_URL_CODE     = "US"
 US_EXCHANGE_CODES_EOD    = ["NASDAQ", "NYSE", "NYSE ARCA"]
 US_EXCHANGE_CODES_MINUTE = ["NASDAQ", "NYSE"]
 
-# Query to select symbol from table symbol_meta
-SQL_CODE_SELECT_SYMBOL_FROM_SYMBOL_META = """SELECT symbol_code FROM symbol_meta WHERE symbol_code=:symbol_code AND 
-                                             exchange_code=:exchange_code AND time_frame=:time_frame AND 
-                                             symbol_status=:symbol_status AND name=:name"""
-
 class ApiErrorCode(IntEnum):
     """Describes request error codes from eodhd.com API"""
+    UNAUTHORIZED       = 401
     DATA_LIMIT_REACHED = 402
     NO_ACCESS_RIGHTS   = 403
     TICKER_NOT_FOUND   = 404
     BAD_GATEWAY        = 502
-
-class TimeFrame(Enum):
-    """Describes timeframe for trading data"""
-    DAILY  = 1
-    MINUTE = 2
-
-class SymbolStatus(Enum):
-    """Describes status of requested"""
-    ACTIVE   = 1
-    DELISTED = 2
 
 class StorageError(Exception):
     """Exception raised for API data volume being used up"""
@@ -114,6 +89,12 @@ class BadGatewayError(RequestError):
         """Inits instance"""
         super().__init__(message, error_code)
 
+class UnauthorizedError(RequestError):
+    """Exception raised for unauthorized access while requesting data"""
+    def __init__(self, message: str, error_code: int):
+        """Inits instance"""
+        super().__init__(message, error_code)
+
 def catch_download_error(func: Callable) -> Callable:
     """Decorator to catch error during download of eodhd.com data"""
     @functools.wraps(func)
@@ -121,8 +102,7 @@ def catch_download_error(func: Callable) -> Callable:
         """Wrapper function"""
         num_retries = 0
         return_value = None
-        error = None
-        while num_retries < MAX_RETRIES_AFTER_CONNECT_ERROR:
+        while num_retries < MAX_RETRIES_AFTER_API_CONNECT_ERROR:
             # Retries calling function when certain errors caught
             try:
                 return_value = func(*args, **kwargs)
@@ -130,6 +110,10 @@ def catch_download_error(func: Callable) -> Callable:
             except ApiError:
                 logging.error("Exception ApiError occurred, wait 60 minutes till next try", exc_info=True)
                 time.sleep(WAIT_TIME_IN_SECS_AFTER_API_ERROR)
+            except UnauthorizedError as error:
+                logging.error("Exception UnauthorizedError occurred")
+                num_retries += 1
+                time.sleep(WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR)
             except BadGatewayError as error:
                 logging.error("Exception BadGatewayError occurred")
                 num_retries += 1
@@ -144,34 +128,9 @@ def catch_download_error(func: Callable) -> Callable:
                 time.sleep(WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR)
         else:
             logging.error("Max number of retries of calling function {0} exceeded".format(func))
-            logging.error(type(error).__name__, exc_info=True)
             exit(1)
         return return_value
     return wrapper_catch_download_error
-
-def catch_insert_in_questdb_error(func: Callable) -> Callable:
-    """Decorator to catch error during db interaction"""
-    @functools.wraps(func)
-    def wrapper_catch_api_used_up_error(*args, **kwargs) -> Any:
-        """Wrapper function"""
-        num_retries = 0
-        return_value = None
-        error = None
-        while num_retries < MAX_RETRIES_AFTER_CONNECT_ERROR:
-            # Retries calling function when certain errors caught
-            try:
-                return_value = func(*args, **kwargs)
-                break
-            except IngressError as error:
-                logging.error("IngressError occurred")
-                num_retries += 1
-                time.sleep(WAIT_TIME_IN_SECS_AFTER_DB_ERROR)
-        else:
-            logging.error("Max number of retries of calling function {0} exceeded".format(func))
-            logging.error(type(error).__name__, exc_info=True)
-            exit(1)
-        return return_value
-    return wrapper_catch_api_used_up_error
 
 @catch_download_error
 def request_exchanges_data_from_eodhd(time_frame: TimeFrame) -> pd.DataFrame:
@@ -182,6 +141,9 @@ def request_exchanges_data_from_eodhd(time_frame: TimeFrame) -> pd.DataFrame:
     if response_exchanges.status_code == ApiErrorCode.BAD_GATEWAY:
         # Bad gateway error occurred
         raise BadGatewayError(response_exchanges.text, response_exchanges.status_code)
+    elif response_exchanges.status_code == ApiErrorCode.UNAUTHORIZED:
+        # Unauthorized error occurred
+        raise UnauthorizedError(response_exchanges.text, response_exchanges.status_code)
     elif response_exchanges.status_code in ApiErrorCode:
         # API used up
         raise ApiError(response_exchanges.text, response_exchanges.status_code)
@@ -216,6 +178,9 @@ def request_exchange_symbols_from_eodhd(exchange_code: str, time_frame: TimeFram
     if response_exchange_symbols.status_code == ApiErrorCode.BAD_GATEWAY:
         # Bad gateway error occurred
         raise BadGatewayError(response_exchange_symbols.text, response_exchange_symbols.status_code)
+    elif response_exchange_symbols.status_code == ApiErrorCode.UNAUTHORIZED:
+        # Unauthorized error occurred
+        raise UnauthorizedError(response_exchange_symbols.text, response_exchange_symbols.status_code)
     elif response_exchange_symbols.status_code in ApiErrorCode:
         # API used up
         raise ApiError(response_exchange_symbols.text, response_exchange_symbols.status_code)
@@ -258,6 +223,9 @@ def request_price_data_from_eodhd(symbol_code: str, exchange_url_code: str, exch
     if response_symbol.status_code == ApiErrorCode.TICKER_NOT_FOUND:
         # Ticker not found error occurred
         data_symbol = None
+    elif response_symbol.status_code == ApiErrorCode.UNAUTHORIZED:
+        # Unauthorized error occurred
+        raise UnauthorizedError(response_symbol.text, response_symbol.status_code)
     elif response_symbol.status_code == ApiErrorCode.BAD_GATEWAY:
         # Bad gateway error occurred
         raise BadGatewayError(response_symbol.text, response_symbol.status_code)
@@ -292,57 +260,6 @@ def request_price_data_from_eodhd(symbol_code: str, exchange_url_code: str, exch
         df_symbol = pd.DataFrame()
 
     return df_symbol
-
-def is_symbol_already_in_db(symbol_code: str, exchange_code: str, time_frame: TimeFrame, symbol_status: SymbolStatus,
-                            symbol_name: str) -> bool:
-    """Checks if symbol has been already in SQLite DB"""
-    # Connects to SQLite DB
-    connection = sqlite3.connect(SQLITE_DB_PATH)
-    # Queries data
-    df_symbol_meta = pd.read_sql(SQL_CODE_SELECT_SYMBOL_FROM_SYMBOL_META, con=connection,
-                                 params={"symbol_code":symbol_code, "exchange_code":exchange_code,
-                                         "time_frame":time_frame.name, "symbol_status":symbol_status.name,
-                                         "name":symbol_name})
-    connection.close()
-    # Checks if symbol exist in DB
-    if df_symbol_meta.shape[0] > 0 and df_symbol_meta.at[0, "symbol_code"] == symbol_code:
-        symbol_already_in_db = True
-    else:
-        symbol_already_in_db = False
-
-    return symbol_already_in_db
-
-@catch_insert_in_questdb_error
-def insert_price_data(df_eod: pd.DataFrame, symbol_code: str, exchange_code: str, time_frame: TimeFrame,
-                      symbol_status: SymbolStatus):
-    """Insert price data into DB"""
-    if time_frame == TimeFrame.DAILY:
-        table_name = DB_TABLE_NAME_EOD_PRICE
-        pd_time_column_name = "datetime"
-    else:
-        table_name = DB_TABLE_NAME_MINUTE_PRICE
-        pd_time_column_name = "timestamp"
-
-    with Sender.from_conf(QUESTDB_CONF_HTTP) as sender:
-        logging.info("""Inserts {0} price records for symbol {1} ({2}, {3}, {4}) into table {5}""".format(
-                     df_eod.shape[0], symbol_code, exchange_code, time_frame.name, symbol_status.name, table_name))
-        sender.dataframe(df_eod, table_name=table_name, at=pd_time_column_name)
-
-def insert_symbol_meta_data(series_exchange_symbol: pd.Series, symbol_code: str, exchange_code: str,
-                            time_frame: TimeFrame, symbol_status: SymbolStatus):
-    """Insert price data into SQLite DB"""
-    try:
-        # Connects to SQLite DB
-        connection = sqlite3.connect(SQLITE_DB_PATH)
-        # Inserts data
-        df_exchange_symbol = series_exchange_symbol.to_frame().T
-        df_exchange_symbol.to_sql("symbol_meta", connection, if_exists="append", index=False)
-        connection.commit()
-        connection.close()
-    except sqlite3.IntegrityError as error:
-        logging.error("""Symbol code {0} ({1}, {2}, {3}) combo already exists table {4}""".format(
-                         symbol_code, exchange_code, time_frame.name, symbol_status.name, DB_TABLE_NAME_SYMBOL_META))
-        raise error
 
 def check_storage_space():
     """Checks if disk offers enough free storage space and if not so, raises error"""
@@ -382,8 +299,8 @@ def request_and_insert_price_data_from_eodhd(time_frame: TimeFrame, symbol_statu
             symbol_code            = series_exchange_symbol["symbol_code"]
             exchange_code          = series_exchange_symbol["exchange_code"]
             symbol_name            = series_exchange_symbol["name"]
-            symbols_is_already_in_db = is_symbol_already_in_db(symbol_code, exchange_code, time_frame, symbol_status,
-                                                               symbol_name)
+            symbols_is_already_in_db = db_access.is_symbol_already_in_db(symbol_code, exchange_code, time_frame,
+                                                                         symbol_status, symbol_name)
             if not overwrite and symbols_is_already_in_db:
                 # Price data for symbol already exists and no overwrite is allowed
                 logging.info("""Symbol {0} ({1}, {2}, {3}) has already been inserted in DB""".format(
@@ -399,9 +316,10 @@ def request_and_insert_price_data_from_eodhd(time_frame: TimeFrame, symbol_statu
                 continue
 
             # Inserts symbol price and meta data
-            insert_price_data(df_symbol, symbol_code, exchange_code, time_frame, symbol_status)
+            db_access.insert_ohlcv_data(df_symbol, symbol_code, exchange_code, time_frame, symbol_status)
             if not symbols_is_already_in_db:
-                insert_symbol_meta_data(series_exchange_symbol, symbol_code, exchange_code, time_frame, symbol_status)
+                db_access.insert_symbol_meta_data(series_exchange_symbol, symbol_code, exchange_code, time_frame,
+                                                  symbol_status)
     return num_of_exchanges, num_of_requested_symbols
 
 def request_from_eodhd(target_time_frame: TimeFrame = None, target_symbol_status: SymbolStatus = None,
