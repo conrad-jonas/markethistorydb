@@ -2,7 +2,7 @@
 
 """Requests trading data from eodhd.com and inserts it into DB"""
 
-from misc.constants  import (WORKING_DIR,
+from misc.const      import (WORKING_DIR,
                              LOG_ONLY_TO_TERMINAL)
 from misc.data_types import (TimeFrame,
                              SymbolStatus)
@@ -299,8 +299,8 @@ def request_and_insert_price_data_from_eodhd(time_frame: TimeFrame, symbol_statu
             symbol_code            = series_exchange_symbol["symbol_code"]
             exchange_code          = series_exchange_symbol["exchange_code"]
             symbol_name            = series_exchange_symbol["name"]
-            symbols_is_already_in_db = db_access.is_symbol_already_in_db(symbol_code, exchange_code, time_frame,
-                                                                         symbol_status, symbol_name)
+            symbols_is_already_in_db = db_access.is_already_in_symbol_meta(symbol_code, exchange_code, time_frame,
+                                                                           symbol_status, symbol_name)
             if not overwrite and symbols_is_already_in_db:
                 # Price data for symbol already exists and no overwrite is allowed
                 logging.info("""Symbol {0} ({1}, {2}, {3}) has already been inserted in DB""".format(
@@ -318,8 +318,8 @@ def request_and_insert_price_data_from_eodhd(time_frame: TimeFrame, symbol_statu
             # Inserts symbol price and meta data
             db_access.insert_ohlcv_data(df_symbol, symbol_code, exchange_code, time_frame, symbol_status)
             if not symbols_is_already_in_db:
-                db_access.insert_symbol_meta_data(series_exchange_symbol, symbol_code, exchange_code, time_frame,
-                                                  symbol_status)
+                db_access.insert_symbol_meta_data(series_exchange_symbol.to_frame().T, symbol_code, exchange_code,
+                                                  time_frame, symbol_status)
     return num_of_exchanges, num_of_requested_symbols
 
 def request_from_eodhd(target_time_frame: TimeFrame = None, target_symbol_status: SymbolStatus = None,

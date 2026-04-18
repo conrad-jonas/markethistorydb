@@ -2,10 +2,10 @@
 
 """Unit tests for request_eodhd.py"""
 
-from db.db_constants import (QUESTDB_CONF_PSYCOPG,
+from db.db_const     import (QUESTDB_CONF_PSYCOPG,
                              SQLITE_DB_PATH,
                              DUMMY_SYMBOL_CODE,
-                             DUMMY_EXCHANGE_CODE)
+                             DUMMY_EXCHANGE_CODE_A as DUMMY_EXCHANGE_CODE)
 from request_data    import request_eodhd
 from db              import db_access
 from db              import db_sql
@@ -44,8 +44,8 @@ def setup_and_cleanup_sqlite():
     # Inserts dummy data
     delete_params = {"symbol_code": DUMMY_SYMBOL_CODE}
     cursor.execute(db_sql.SQL_DELETE_SYMBOL_FROM_SYMBOL_META, delete_params)
-    insert_params = {"symbol_code": DUMMY_SYMBOL_CODE, "exchange_code": DUMMY_EXCHANGE_CODE}
-    cursor.execute(db_sql.SQL_CODE_INSERT_DUMMY_SYMBOL_INTO_SYMBOL_META, insert_params)
+    insert_params = {"symbol_code": DUMMY_SYMBOL_CODE, "exchange_code": DUMMY_EXCHANGE_CODE, "name": "test_name"}
+    cursor.execute(db_sql.SQL_INSERT_DUMMY_SYMBOL_INTO_SYMBOL_META, insert_params)
     connection.commit()
 
     # Runs test
@@ -126,8 +126,8 @@ def test_is_symbol_already_in_db_true(setup_test: Callable, setup_and_cleanup_sq
     time_frame = request_eodhd.TimeFrame.DAILY
     symbol_status = request_eodhd.SymbolStatus.ACTIVE
 
-    is_symbol_already_in_db = db_access.is_symbol_already_in_db(DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE, time_frame,
-                                                                symbol_status, "test_name")
+    is_symbol_already_in_db = db_access.is_already_in_symbol_meta(DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE, time_frame,
+                                                                  symbol_status, "test_name")
     assert is_symbol_already_in_db == True
 
 @pytest.mark.db
@@ -138,8 +138,8 @@ def test_is_symbol_already_in_db_false(setup_test: Callable, setup_and_cleanup_s
 
     assert "test_code_XYZ" != DUMMY_SYMBOL_CODE
 
-    is_symbol_already_in_db = db_access.is_symbol_already_in_db(symbol_code, DUMMY_EXCHANGE_CODE, time_frame,
-                                                                symbol_status, "test_name")
+    is_symbol_already_in_db = db_access.is_already_in_symbol_meta(symbol_code, DUMMY_EXCHANGE_CODE, time_frame,
+                                                                  symbol_status, "test_name")
     assert is_symbol_already_in_db == False
 
 @pytest.mark.db
@@ -200,11 +200,11 @@ def test_insert_symbol_meta_data(setup_test: Callable, setup_and_cleanup_sqlite:
                  "name": "testo_name", "country": "testo_country", "exchange_code": DUMMY_EXCHANGE_CODE,
                  "currency": "testo_currency", "type": "testo_type", "isin": "testo_isin"}
     row_exchange_symbol = pd.Series(data_dict)
-    db_access.insert_symbol_meta_data(row_exchange_symbol, DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE, time_frame,
-                                      symbol_status)
+    db_access.insert_symbol_meta_data(row_exchange_symbol.to_frame().T, DUMMY_SYMBOL_CODE, DUMMY_EXCHANGE_CODE,
+                                      time_frame, symbol_status)
     time.sleep(0.1)
     # Queries data
-    df_symbol_meta = pd.read_sql(db_sql.SQL_SELECT_SYMBOL_FROM_SYMBOL_META, con=connection,
+    df_symbol_meta = pd.read_sql(db_sql.SQL_SELECT_ALL_FROM_SYMBOL_META_BY_VALUES, con=connection,
                                  params={"symbol_code": DUMMY_SYMBOL_CODE, "exchange_code": DUMMY_EXCHANGE_CODE,
                                          "time_frame": time_frame.name, "symbol_status": symbol_status.name,
                                          "name": "testo_name"})
