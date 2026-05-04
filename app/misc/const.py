@@ -1,6 +1,6 @@
 #!/usr/bin/env python12.9
 
-"""Global constants"""
+"""General global constants"""
 
 from os.path import dirname, abspath
 
