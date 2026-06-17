@@ -1,10 +1,10 @@
 #!/usr/bin/env python12.9
 
-"""Unit tests for db_setup.py"""
+"""Unit tests for setup.py"""
 
-import db.db_const as db_const
-import db.db_setup as db_setup
-import db.db_sql as db_sql
+import db.price.tables as db_const
+import setup.main as db_setup
+import db.price.queries as db_sql
 
 import pytest
 import psycopg as pg
@@ -15,7 +15,7 @@ from collections.abc import Callable
 
 @pytest.mark.db
 def test_setup_questdb(setup_test: Callable, backup_and_restore_questdb: Callable):
-    db_setup._create_questdb()
+    db_setup._setup_tables()
     time.sleep(0.5)
     # Check if tables and columns exist
     tables_to_check = {db_const.TABLE_NAME_DAILY_PRICE: db_const.COLUMNS_DAILY_PRICE,

@@ -1,0 +1,1 @@
+from fetch.main import fetch
