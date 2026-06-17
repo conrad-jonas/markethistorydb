@@ -2,14 +2,13 @@
 
 """Helpers for testing"""
 
-import db.db_const as db_const
+import db.price.tables as db_const
 
 import ctypes
 import os
 import pytest
 import shutil
 import subprocess
-import time
 
 from os.path import dirname, abspath
 

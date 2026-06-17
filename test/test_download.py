@@ -1,13 +1,13 @@
 #!/usr/bin/env python12.9
 
 """Unit tests for download.py"""
-from download.download_objects import WriteMode
-from download                  import download, download_insert, download_objects
+from fetch.utils import WriteMode
+from fetch                  import download_db
 
-import db.db_access as db_access
-import db.db_const  as db_const
-import db.db_setup  as db_setup
-import db.db_sql    as db_sql
+import db.price.access as db_access
+import db.price.tables as db_const
+import setup.main as db_setup
+import db.price.queries as db_sql
 
 import pandas  as pd
 import pytest
@@ -22,7 +22,7 @@ from psycopg            import sql
 from pytest_mock        import MockerFixture
 from questdb.ingress    import IngressError
 from typing             import Any
-from unittest.mock      import MagicMock, patch
+from unittest.mock      import MagicMock
 
 # Enable pytest asserts in all functions
 pytest.register_assert_rewrite('mypackage.utils')
@@ -163,7 +163,7 @@ def test_download_minute_price_data_from_eodhd_1(setup_test: Callable, mocker: M
     mocker.patch("download.download._END_DATE_MINUTE_DATA", "04-01-2017")
 
 
-    df: pd.DataFrame = download._download_minute_price_data_from_eodhd("AAPL", "US", "NASDAQ")
+    df: pd.DataFrame = download._get_minute_price_data("AAPL", "US", "NASDAQ")
     assert df.shape[0] > 0
     assert df.shape[1] == 9
     assert set(list(df)) == set(db_const.COLUMNS_MINUTE_PRICE)
@@ -178,7 +178,7 @@ def test_download_minute_price_data_from_eodhd_2(setup_test: Callable, mocker: M
     mocker.patch("download.download._END_DATE_MINUTE_DATA", "10-03-2026")
     mocker.patch("download.download._NUM_OF_DAYS_PER_MINUTE_DATA_REQUEST", 3)
 
-    df: pd.DataFrame = download._download_minute_price_data_from_eodhd("AAPL", "US", "NASDAQ")
+    df: pd.DataFrame = download._get_minute_price_data("AAPL", "US", "NASDAQ")
     assert df.shape[0] > 0
     assert df.shape[1] == 9
     assert set(list(df)) == set(db_const.COLUMNS_MINUTE_PRICE)
@@ -200,8 +200,8 @@ def test_download_minute_price_data_from_eodhd_3(setup_test: Callable, mocker: M
     mocker.patch("download.download._START_DATE_MINUTE_DATA", "02-01-2015")
     mocker.patch("download.download._END_DATE_MINUTE_DATA", "10-03-2026")
 
-    df: pd.DataFrame = download._download_minute_price_data_from_eodhd("AAPL", "US", "NASDAQ",
-                                                                       start_datetime=datetime(2026, 3, 2))
+    df: pd.DataFrame = download._get_minute_price_data("AAPL", "US", "NASDAQ",
+                                                       start_datetime=datetime(2026, 3, 2))
     assert df.shape[0] > 0
     assert df.shape[1] == 9
     assert set(list(df)) == set(db_const.COLUMNS_MINUTE_PRICE)
@@ -229,7 +229,7 @@ def test_download_price_data_into_db_without_start_date_default(setup_test: Call
     mocker.patch("download.download._START_DATE_MINUTE_DATA", "04-02-2026")
     mocker.patch("download.download._END_DATE_MINUTE_DATA", "10-03-2026")
 
-    result = download._download_price_data_into_db("AAPL", "US", "NASDAQ", time_frame, symbol_status)
+    result = download.run("AAPL", "US", "NASDAQ", time_frame, symbol_status)
     assert result == True
 
     # Queries QuestDB data
@@ -279,7 +279,7 @@ def test_download_price_data_into_db_without_start_date_empty(setup_test: Callab
         mock_request = mocker.patch("download.download._download_minute_price_data_from_eodhd",
                                     return_value=response_mock)
 
-    result = download._download_price_data_into_db("AAPL", "US", "NASDAQ", time_frame, symbol_status)
+    result = download.run("AAPL", "US", "NASDAQ", time_frame, symbol_status)
     assert result == False
 
     mock_request.assert_called_once()
@@ -318,8 +318,8 @@ def test_download_price_data_into_db_with_start_date_default(setup_test: Callabl
     # Mocking dependencies
     mocker.patch("download.download_request._API_TOKEN", "demo")
 
-    result = download._download_price_data_into_db("AAPL", "US", "NASDAQ", time_frame, symbol_status,
-                                                   start_datetime=datetime(2026, 2, 4))
+    result = download.run("AAPL", "US", "NASDAQ", time_frame, symbol_status,
+                          start_datetime=datetime(2026, 2, 4))
     assert result == True
 
     # Queries QuestDB data
@@ -370,8 +370,8 @@ def test_download_price_data_into_db_with_start_date_empty(setup_test: Callable,
         mock_request = mocker.patch("download.download._download_minute_price_data_from_eodhd",
                                     return_value=response_mock)
 
-    result = download._download_price_data_into_db("AAPL", "US", "NASDAQ", time_frame, symbol_status,
-                                                   start_datetime=datetime(2026, 2, 4))
+    result = download.run("AAPL", "US", "NASDAQ", time_frame, symbol_status,
+                          start_datetime=datetime(2026, 2, 4))
     assert result == False
     mock_request.assert_called_once()
 
@@ -451,7 +451,7 @@ def test_download_fundamental_data_into_db_default(setup_test: Callable, setup_a
     response_mock = 1
     mock_function = mocker.patch("db.db_access.get_id_from_symbol_meta", return_value=response_mock)
 
-    result = download._download_fundamental_data_into_db("AAPL", "Apple Inc.", "US", "NASDAQ", time_frame, symbol_status)
+    result = download.run("AAPL", "Apple Inc.", "US", "NASDAQ", time_frame, symbol_status)
     assert result == True
     mock_function.assert_called_once()
     time.sleep(1)
@@ -478,7 +478,7 @@ def test_download_fundamental_data_into_db_empty(setup_test: Callable, setup_and
     mocker.patch("download.download_request._API_TOKEN", "demo")
     mock_function = mocker.patch("download.download_request.request_fundamental_data_from_eodhd", return_value={})
 
-    result = download._download_fundamental_data_into_db("AAPL", "Apple Inc.", "US", "NASDAQ", time_frame, symbol_status)
+    result = download.run("AAPL", "Apple Inc.", "US", "NASDAQ", time_frame, symbol_status)
     assert result == False
     mock_function.assert_called_once()
     time.sleep(1)
@@ -626,13 +626,13 @@ def insert_pre_existing_data_ending_with_day(mocker: MockerFixture, time_frame: 
     # Insert pre-existing data into QUESTDB
     # Requests data
     if time_frame == download.TimeFrame.DAILY:
-        df_symbol = download._download_daily_price_data_from_eodhd(symbol_code, exchange_url_code, exchange_code,
-                                                                   time_frame, start_datetime=datetime(2026, 1, 6))
+        df_symbol = download._get_daily_price_data(symbol_code, exchange_url_code, exchange_code,
+                                                   time_frame, start_datetime=datetime(2026, 1, 6))
         df_symbol['datetime'] = pd.to_datetime(df_symbol['datetime'])
         df_filtered = df_symbol[df_symbol['datetime'] < '2026-01-30']
     else:
-        df_symbol = download._download_minute_price_data_from_eodhd(symbol_code, exchange_url_code, exchange_code,
-                                                                    start_datetime=datetime(2026, 1, 6))
+        df_symbol = download._get_minute_price_data(symbol_code, exchange_url_code, exchange_code,
+                                                    start_datetime=datetime(2026, 1, 6))
         df_symbol['timestamp'] = pd.to_datetime(df_symbol['timestamp'])
         df_filtered = df_symbol[df_symbol['timestamp'] < '2026-01-30']
     # Insert into db
@@ -661,13 +661,13 @@ def insert_pre_existing_data_ending_mid_day(mocker: MockerFixture, time_frame: d
     # Insert pre-existing data into QUESTDB
     # Requests data
     if time_frame == download.TimeFrame.DAILY:
-        df_symbol = download._download_daily_price_data_from_eodhd(symbol_code, exchange_url_code, exchange_code,
-                                                                   time_frame, start_datetime=datetime(2026, 1, 6))
+        df_symbol = download._get_daily_price_data(symbol_code, exchange_url_code, exchange_code,
+                                                   time_frame, start_datetime=datetime(2026, 1, 6))
         df_symbol['datetime'] = pd.to_datetime(df_symbol['datetime'])
         df_filtered = df_symbol[df_symbol['datetime'] < datetime(2026, 1, 29, hour=14)]
     else:
-        df_symbol = download._download_minute_price_data_from_eodhd(symbol_code, exchange_url_code, exchange_code,
-                                                                    start_datetime=datetime(2026, 1, 6))
+        df_symbol = download._get_minute_price_data(symbol_code, exchange_url_code, exchange_code,
+                                                    start_datetime=datetime(2026, 1, 6))
         df_symbol['timestamp'] = pd.to_datetime(df_symbol['timestamp'])
         df_filtered = df_symbol[df_symbol['timestamp'] < datetime(2026, 1, 29, hour=14)]
     # Insert into db
@@ -1152,7 +1152,7 @@ def test_download_without_flags(setup_test: Callable, setup_and_cleanup_sqlite: 
     target_time_frame = None
     target_symbol_status = None
     target_exchange_name = None
-    download._download(target_time_frame, target_symbol_status, target_exchange_name)
+    download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
 
     mock_function_1.assert_called()
     mock_function_2.assert_called()
@@ -1181,7 +1181,7 @@ def test_download_only_daily_data(setup_test: Callable, setup_and_cleanup_sqlite
     target_time_frame = download.TimeFrame.DAILY
     target_symbol_status = None
     target_exchange_name = None
-    download._download(target_time_frame, target_symbol_status, target_exchange_name)
+    download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
 
     mock_function_1.assert_called()
     mock_function_2.assert_called()
@@ -1209,7 +1209,7 @@ def test_download_only_minute_data(setup_test: Callable, setup_and_cleanup_sqlit
     target_time_frame = download.TimeFrame.MINUTE
     target_symbol_status = None
     target_exchange_name = None
-    download._download(target_time_frame, target_symbol_status, target_exchange_name)
+    download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
 
     mock_function_1.assert_called()
     mock_function_2.assert_called()
@@ -1237,7 +1237,7 @@ def test_download_only_active_symbols(setup_test: Callable, setup_and_cleanup_sq
     target_time_frame = None
     target_symbol_status = download.SymbolStatus.ACTIVE
     target_exchange_name = None
-    download._download(target_time_frame, target_symbol_status, target_exchange_name)
+    download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
 
     mock_function_1.assert_called()
     mock_function_2.assert_called()
@@ -1267,7 +1267,7 @@ def test_download_only_delisted_symbols(setup_test: Callable, setup_and_cleanup_
     target_time_frame = None
     target_symbol_status = download.SymbolStatus.DELISTED
     target_exchange_name = None
-    download._download(target_time_frame, target_symbol_status, target_exchange_name)
+    download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
 
     mock_function_1.assert_called()
     mock_function_2.assert_called()
@@ -1292,7 +1292,7 @@ def test_download_no_us_exchange(setup_test: Callable, setup_and_cleanup_sqlite:
     target_time_frame = None
     target_symbol_status = None
     target_exchange_name = "XETRA"
-    download._download(target_time_frame, target_symbol_status, target_exchange_name)
+    download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
 
     mock_function_1.assert_called()
     mock_function_2.assert_called()
@@ -1321,9 +1321,9 @@ def test_download_with_error_ticker_not_found(setup_test: Callable, setup_and_cl
     target_exchange_name = None
 
     with pytest.raises(SystemExit) as pytest_wrapped_error:
-        download._download(target_time_frame, target_symbol_status, target_exchange_name)
+        download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
     assert pytest_wrapped_error.type == SystemExit
-    assert pytest_wrapped_error.value.code == download_objects.ExitCode.MAX_NUM_OF_REQUEST_TRIES_ERROR
+    assert pytest_wrapped_error.value.code == download_objects.ErrorCode.REQUEST_ERROR
     assert mock_function.call_count == 3
 
 @pytest.mark.download
@@ -1339,9 +1339,9 @@ def test_download_with_error_unauthorized(setup_test: Callable, setup_and_cleanu
     target_exchange_name = None
 
     with pytest.raises(SystemExit) as pytest_wrapped_error:
-        download._download(target_time_frame, target_symbol_status, target_exchange_name)
+        download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
     assert pytest_wrapped_error.type == SystemExit
-    assert pytest_wrapped_error.value.code == download_objects.ExitCode.MAX_NUM_OF_REQUEST_TRIES_ERROR
+    assert pytest_wrapped_error.value.code == download_objects.ErrorCode.REQUEST_ERROR
     assert mock_function.call_count == 3
 
 @pytest.mark.download
@@ -1358,7 +1358,7 @@ def test_download_with_json_decode_error(setup_test: Callable, setup_and_cleanup
     target_exchange_name = None
 
     with pytest.raises(JSONDecodeError) as pytest_wrapped_error:
-        download._download(target_time_frame, target_symbol_status, target_exchange_name)
+        download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
     assert pytest_wrapped_error.type == JSONDecodeError
     assert mock_function.call_count == 1
 
@@ -1375,7 +1375,7 @@ def test_download_with_questdb_ingress_error(setup_test: Callable, setup_and_cle
     target_exchange_name = None
 
     with pytest.raises(SystemExit) as pytest_wrapped_error:
-        download._download(target_time_frame, target_symbol_status, target_exchange_name)
+        download.fetch(target_time_frame, target_symbol_status, target_exchange_name)
     mock_function_1.assert_called()
     mock_function_2.assert_called()
     assert pytest_wrapped_error.type == SystemExit

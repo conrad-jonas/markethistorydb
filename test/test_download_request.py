@@ -1,9 +1,9 @@
 #!/usr/bin/env python12.9
 
-"""Unit tests for download_request.py"""
-from download import download_request, download_helpers
+"""Unit tests for request.py"""
+from fetch import download_helpers
 
-import db.db_const  as db_const
+import db.price.tables as db_const
 
 import pandas  as pd
 import pytest
@@ -17,7 +17,7 @@ from unittest.mock       import MagicMock
 
 # Redefines constants used in test object to decrease testing time duration:
 # Time to wait after connection error to host occurred
-download_request._WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR = 2
+_requester._WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR = 2
 # Time to wait after API used up error
 download_request._WAIT_TIME_IN_SECS_AFTER_API_ERROR = 2
 
@@ -51,7 +51,7 @@ def test_request_data_from_url_bad_gateway(setup_test: Callable, mocker: MockerF
         params = {"api_token": "demo", "fmt": "json", "from": "1627896900", "to": "1630575300"}
         download_request._request_data_from_url(url_api_error, params)
     assert pytest_wrapped_error.type == SystemExit
-    assert pytest_wrapped_error.value.code == download_request.ExitCode.MAX_NUM_OF_REQUEST_TRIES_ERROR
+    assert pytest_wrapped_error.value.code == download_request.ErrorCode.REQUEST_ERROR
     assert mock_request.call_count == 3
     assert url_api_error in mock_request.call_args[0][0]
 
@@ -68,7 +68,7 @@ def test_request_data_from_url_unauthorized(setup_test: Callable, mocker: Mocker
         params = {"api_token": "demo", "fmt": "json", "from": "1627896900", "to": "1630575300"}
         download_request._request_data_from_url(url_api_error, params)
     assert pytest_wrapped_error.type == SystemExit
-    assert pytest_wrapped_error.value.code == download_request.ExitCode.MAX_NUM_OF_REQUEST_TRIES_ERROR
+    assert pytest_wrapped_error.value.code == download_request.ErrorCode.REQUEST_ERROR
     assert mock_request.call_count == 3
     assert url_api_error in mock_request.call_args[0][0]
 
@@ -85,7 +85,7 @@ def test_request_data_from_url_other_api_error(setup_test: Callable, mocker: Moc
         params = {"api_token": "demo", "fmt": "json", "from": "1627896900", "to": "1630575300"}
         download_request._request_data_from_url(url_api_error, params)
     assert pytest_wrapped_error.type == SystemExit
-    assert pytest_wrapped_error.value.code == download_request.ExitCode.MAX_NUM_OF_REQUEST_TRIES_ERROR
+    assert pytest_wrapped_error.value.code == download_request.ErrorCode.REQUEST_ERROR
     assert mock_request.call_count == 3
     assert url_api_error in mock_request.call_args[0][0]
 
@@ -151,12 +151,12 @@ def test_request_exchanges_data_from_eodhd_success(setup_test: Callable, time_fr
     }]
     mock_request = mocker.patch("download.download_request._request_data_from_url", return_value=response_mock)
 
-    df = download_request.request_exchanges_data_from_eodhd(time_frame)
+    df = download_request.request_exchanges_data(time_frame)
     assert not df.empty and df.shape[0] > 0
     mock_request.assert_called_once()
 
 @pytest.mark.api
-@pytest.mark.parametrize("time_frame", [download_request.TimeFrame.DAILY, download_request.TimeFrame.MINUTE])
+@pytest.mark.parametrize("time_frame", [download_request.TimeFrame.DAILY, _requester.TimeFrame.MINUTE])
 def test_request_exchanges_data_from_eodhd_filtered(setup_test: Callable, time_frame: download_request.TimeFrame,
                                                     mocker: MockerFixture):
     # Mocking dependencies
@@ -180,33 +180,33 @@ def test_request_exchanges_data_from_eodhd_filtered(setup_test: Callable, time_f
     }]
     mock_request = mocker.patch("download.download_request._request_data_from_url", return_value=response_mock)
 
-    df = download_request.request_exchanges_data_from_eodhd(time_frame)
+    df = download_request.request_exchanges_data(time_frame)
     assert df.empty
     mock_request.assert_called_once()
 
 @pytest.mark.api
-@pytest.mark.parametrize("time_frame", [download_request.TimeFrame.DAILY, download_request.TimeFrame.MINUTE])
+@pytest.mark.parametrize("time_frame", [_requester.TimeFrame.DAILY, download_request.TimeFrame.MINUTE])
 def test_request_exchanges_data_from_eodhd_without_mock(setup_test: Callable, time_frame: download_request.TimeFrame):
     url_exchanges = "https://eodhd.com/api/exchanges-list/?"
-    params = {"api_token": download_request._API_TOKEN, "fmt": "json"}
+    params = {"api_token": download_request.API_TOKEN, "fmt": "json"}
     response_exchanges = requests.get(url_exchanges, params)
     if response_exchanges.status_code in [401, 402, 403]:
         with pytest.raises(SystemExit) as pytest_wrapped_error:
-            download_request.request_exchanges_data_from_eodhd(time_frame)
+            download_request.request_exchanges_data(time_frame)
         assert pytest_wrapped_error.type == SystemExit
         assert pytest_wrapped_error.value.code == 3
     else:
-        df = download_request.request_exchanges_data_from_eodhd(time_frame)
+        df = download_request.request_exchanges_data(time_frame)
         assert not df.empty and df.shape[0] > 0
 
 @pytest.mark.api
 @pytest.mark.parametrize("time_frame, symbol_status",
-                         [(download_request.TimeFrame.DAILY, download_request.SymbolStatus.ACTIVE),
+                         [(_requester.TimeFrame.DAILY, download_request.SymbolStatus.ACTIVE),
                           (download_request.TimeFrame.DAILY, download_request.SymbolStatus.DELISTED),
                           (download_request.TimeFrame.MINUTE, download_request.SymbolStatus.ACTIVE),
-                          (download_request.TimeFrame.MINUTE, download_request.SymbolStatus.DELISTED)])
+                          (download_request.TimeFrame.MINUTE, _requester.SymbolStatus.DELISTED)])
 def test_request_exchange_symbols_from_eodhd_success(setup_test: Callable, time_frame: download_request.TimeFrame,
-                                                     symbol_status: download_request.SymbolStatus,
+                                                     symbol_status: _requester.SymbolStatus,
                                                      mocker: MockerFixture):
     # Mocking dependencies
     response_mock = [{
@@ -230,7 +230,7 @@ def test_request_exchange_symbols_from_eodhd_success(setup_test: Callable, time_
     mock_request = mocker.patch("download.download_request._request_data_from_url", return_value=response_mock)
 
     exchange_code = "US"
-    df = download_request.request_exchange_symbols_from_eodhd(exchange_code, time_frame, symbol_status)
+    df = requester.request_exchange_symbols(exchange_code, time_frame, symbol_status)
     mock_request.assert_called_once()
 
     # Verify column names
@@ -243,7 +243,7 @@ def test_request_exchange_symbols_from_eodhd_success(setup_test: Callable, time_
 @pytest.mark.parametrize("time_frame, symbol_status",
                          [(download_request.TimeFrame.DAILY, download_request.SymbolStatus.ACTIVE),
                           (download_request.TimeFrame.DAILY, download_request.SymbolStatus.DELISTED),
-                          (download_request.TimeFrame.MINUTE, download_request.SymbolStatus.ACTIVE),
+                          (download_request.TimeFrame.MINUTE, _requester.SymbolStatus.ACTIVE),
                           (download_request.TimeFrame.MINUTE, download_request.SymbolStatus.DELISTED)])
 def test_request_exchange_symbols_from_eodhd_filtered(setup_test: Callable, time_frame: download_request.TimeFrame,
                                                       symbol_status: download_request.SymbolStatus,
@@ -270,34 +270,34 @@ def test_request_exchange_symbols_from_eodhd_filtered(setup_test: Callable, time
     mock_request = mocker.patch("download.download_request._request_data_from_url", return_value=response_mock)
 
     exchange_code = "US"
-    df = download_request.request_exchange_symbols_from_eodhd(exchange_code, time_frame, symbol_status)
+    df = download_request.request_exchange_symbols(exchange_code, time_frame, symbol_status)
     assert df.empty
     mock_request.assert_called_once()
 
 @pytest.mark.api
 @pytest.mark.parametrize("time_frame, symbol_status",
                          [(download_request.TimeFrame.DAILY, download_request.SymbolStatus.ACTIVE),
-                          (download_request.TimeFrame.DAILY, download_request.SymbolStatus.DELISTED),
-                          (download_request.TimeFrame.MINUTE, download_request.SymbolStatus.ACTIVE),
+                          (download_request.TimeFrame.DAILY, _requester.SymbolStatus.DELISTED),
+                          (download_request.TimeFrame.MINUTE, _requester.SymbolStatus.ACTIVE),
                           (download_request.TimeFrame.MINUTE, download_request.SymbolStatus.DELISTED)])
 def test_request_exchange_symbols_from_eodhd_without_mock(setup_test: Callable, time_frame: download_request.TimeFrame,
-                                             symbol_status: download_request.SymbolStatus):
+                                                          symbol_status: download_request.SymbolStatus):
     exchange_code = "US"
     if symbol_status == download_request.SymbolStatus.ACTIVE:
         url_exchange_symbols = "https://eodhd.com/api/exchange-symbol-list/{0}?".format(exchange_code)
-        params = {"api_token": download_request._API_TOKEN, "fmt": "json"}
+        params = {"api_token": download_request.API_TOKEN, "fmt": "json"}
     else:
         url_exchange_symbols = "https://eodhd.com/api/exchange-symbol-list/{0}?".format(exchange_code)
-        params = {"api_token": download_request._API_TOKEN, "fmt": "json", "delisted": "1"}
+        params = {"api_token": download_request.API_TOKEN, "fmt": "json", "delisted": "1"}
 
     response_exchange_symbols = requests.get(url_exchange_symbols, params)
     if response_exchange_symbols.status_code in [401, 402, 403]:
         with pytest.raises(SystemExit) as pytest_wrapped_error:
-            download_request.request_exchange_symbols_from_eodhd(exchange_code, time_frame, symbol_status)
+            _requester.request_exchange_symbols(exchange_code, time_frame, symbol_status)
         assert pytest_wrapped_error.type == SystemExit
         assert pytest_wrapped_error.value.code == 3
     else:
-        df = download_request.request_exchange_symbols_from_eodhd(exchange_code, time_frame, symbol_status)
+        df = download_request.request_exchange_symbols(exchange_code, time_frame, symbol_status)
         assert df.shape[0] > 0
         assert df.shape[1] == len(db_const.COLUMNS_SYMBOL_META[2:])
         assert (list(download_helpers.convert_df_column_names_from_camel_to_snake_case(df)) ==
@@ -305,10 +305,10 @@ def test_request_exchange_symbols_from_eodhd_without_mock(setup_test: Callable, 
 
 @pytest.mark.api
 @pytest.mark.parametrize("time_frame", [download_request.TimeFrame.DAILY, download_request.TimeFrame.MINUTE])
-def test_request_price_data_from_eodhd_success(setup_test: Callable, time_frame: download_request.TimeFrame,
+def test_request_price_data_from_eodhd_success(setup_test: Callable, time_frame: _requester.TimeFrame,
                                                mocker: MockerFixture):
     # Mocking dependencies
-    if time_frame == download_request.TimeFrame.DAILY:
+    if time_frame == _requester.TimeFrame.DAILY:
         response_mock = [{
             "date": "2023-01-03",
             "open": 110.47,
@@ -379,7 +379,7 @@ def test_request_price_data_from_eodhd_success(setup_test: Callable, time_frame:
         }]
     mock_request = mocker.patch("download.download_request._request_data_from_url", return_value=response_mock)
 
-    if time_frame == download_request.TimeFrame.DAILY:
+    if time_frame == _requester.TimeFrame.DAILY:
         start_date = None
         end_date = None
     else:
@@ -389,8 +389,8 @@ def test_request_price_data_from_eodhd_success(setup_test: Callable, time_frame:
     symbol = "AAPL"
     exchange_code = "US"
     exchange_name = "NASDAQ"
-    df = download_request.request_price_data_from_eodhd(symbol, exchange_code, exchange_name, time_frame, start_date,
-                                                        end_date)
+    df = download_request.request_price_data(symbol, exchange_code, exchange_name, time_frame, start_date,
+                                             end_date)
     assert not df.empty and df.shape[0] > 0
     mock_request.assert_called_once()
 
@@ -404,8 +404,8 @@ def test_request_price_data_from_eodhd_no_dates(setup_test: Callable):
     exchange_name = "NASDAQ"
 
     with pytest.raises(ValueError) as pytest_wrapped_error:
-        download_request.request_price_data_from_eodhd(symbol, exchange_code, exchange_name, time_frame, start_date,
-                                                       end_date)
+        _requester.request_price_data(symbol, exchange_code, exchange_name, time_frame, start_date,
+                                      end_date)
     assert pytest_wrapped_error.type == ValueError
 
 @pytest.mark.api
@@ -424,8 +424,8 @@ def test_request_price_data_from_eodhd_without_mock_1(setup_test: Callable, time
         start_date = datetime(2026, 1, 5)
         end_date = datetime(2026, 2, 3)
 
-    df = download_request.request_price_data_from_eodhd(symbol, exchange_code, exchange_name, time_frame, start_date,
-                                                        end_date)
+    df = download_request.request_price_data(symbol, exchange_code, exchange_name, time_frame, start_date,
+                                             end_date)
     assert (df.shape[0] > 0)
     if time_frame == download_request.TimeFrame.MINUTE:
         assert df.at[0, "timestamp"].date() == start_date.date()
@@ -441,20 +441,20 @@ def test_request_price_data_from_eodhd_without_mock_2(setup_test: Callable, mock
     start_date = datetime(2026, 1, 1)
     end_date = None
 
-    df = download_request.request_price_data_from_eodhd(symbol, exchange_code, exchange_name, time_frame, start_date,
-                                                     end_date)
+    df = download_request.request_price_data(symbol, exchange_code, exchange_name, time_frame, start_date,
+                                             end_date)
     assert (df.shape[0] > 0)
     # On 2026.1.1 exchange was closed
     assert df.at[0, "datetime"].date() == start_date.date() + timedelta(days=1)
 
 @pytest.mark.api
-@pytest.mark.parametrize("time_frame", [download_request.TimeFrame.DAILY, download_request.TimeFrame.MINUTE])
-def test_request_fundamental_data_from_eodhd(setup_test: Callable, time_frame: download_request.TimeFrame,
+@pytest.mark.parametrize("time_frame", [download_request.TimeFrame.DAILY, _requester.TimeFrame.MINUTE])
+def test_request_fundamental_data_from_eodhd(setup_test: Callable, time_frame: requester.TimeFrame,
                                              mocker: MockerFixture):
     # Mocking dependencies
     mocker.patch("download.download_request._API_TOKEN", "demo")
 
-    result = download_request.request_fundamental_data_from_eodhd("AAPL", "US")
+    result = download_request.request_fundamental_data("AAPL", "US")
 
     assert len(result) == 9
     assert isinstance(result[download_request.FundamentalType.SECTOR_AND_INDUSTRY], pd.Series)
@@ -468,15 +468,16 @@ def test_request_fundamental_data_from_eodhd(setup_test: Callable, time_frame: d
     assert isinstance(result[download_request.FundamentalType.INCOME_STATEMENT_ANNUALLY], pd.DataFrame)
 
     # Verify column dropping logic for Balance Sheet
-    df_balance_sheet = result[download_request.FundamentalType.BALANCE_SHEET_QUARTERLY]
+    df_balance_sheet = result[_requester.FundamentalType.BALANCE_SHEET_QUARTERLY]
     assert "preferredStockRedeemable" not in df_balance_sheet.columns
 
     # Verify column dropping logic for Income Statement
-    df_income_statement = result[download_request.FundamentalType.INCOME_STATEMENT_QUARTERLY]
+    df_income_statement = result[requester.FundamentalType.INCOME_STATEMENT_QUARTERLY]
     assert "preferredStockAndOtherAdjustments" not in df_income_statement.columns
 
     # Verify column names
-    assert result[download_request.FundamentalType.SECTOR_AND_INDUSTRY].shape[0] == len(db_const.COLUMNS_SYMBOL_SECTOR[2:])
+    assert result[download_request.FundamentalType.SECTOR_AND_INDUSTRY].shape[0] == len(
+        db_const.COLUMNS_SYMBOL_SECTOR[2:])
     df_earnings_quarterly = download_helpers.convert_df_column_names_from_camel_to_snake_case(
         result[download_request.FundamentalType.EARNINGS_QUARTERLY])
     assert list(df_earnings_quarterly) == db_const.COLUMNS_EARNINGS_QUARTERLY[2:]
@@ -490,7 +491,7 @@ def test_request_fundamental_data_from_eodhd(setup_test: Callable, time_frame: d
         result[download_request.FundamentalType.BALANCE_SHEET_QUARTERLY])
     assert list(df_balance_sheet_annually) == db_const.COLUMNS_BALANCE_SHEET_ANNUALLY[2:]
     df_cash_flow_quarterly = download_helpers.convert_df_column_names_from_camel_to_snake_case(
-        result[download_request.FundamentalType.CASH_FLOW_QUARTERLY])
+        result[_requester.FundamentalType.CASH_FLOW_QUARTERLY])
     assert list(df_cash_flow_quarterly) == db_const.COLUMNS_CASH_FLOW_QUARTERLY[2:]
     df_cash_flow_annually = download_helpers.convert_df_column_names_from_camel_to_snake_case(
         result[download_request.FundamentalType.CASH_FLOW_ANNUALLY])
