@@ -7,7 +7,9 @@ from psycopg  import sql
 from typing   import Any
 import pandas as pd
 
-from db               import statements, tables, Query
+import db.tables as tables
+import db.statements as statements
+from db.io.query      import Query
 from utils.categories import TimeFrame, SymbolStatus
 
 

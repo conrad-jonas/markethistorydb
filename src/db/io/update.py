@@ -5,7 +5,8 @@
 from psycopg import sql
 import pandas as pd
 
-from db import statements, Query
+import db.statements as statements
+from db.io.query import Query
 
 
 class Update:

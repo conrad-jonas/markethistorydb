@@ -4,7 +4,9 @@
 
 from psycopg import sql
 
-from db import tables, statements, Query
+import db.tables as tables
+import db.statements as statements
+from db.io.query import Query
 
 
 class Delete:

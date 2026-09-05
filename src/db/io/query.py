@@ -3,7 +3,7 @@ from typing import Any
 import psycopg as pg
 from psycopg import sql
 
-from db import QUESTDB_CONF_PSYCOPG
+from db.config import QUESTDB_CONF_PSYCOPG
 
 
 class Query:

@@ -7,7 +7,8 @@ from questdb.ingress import Sender
 import logging
 import pandas as pd
 
-from db               import tables, QUESTDB_CONF_HTTP
+import db.tables as tables
+from db.config        import QUESTDB_CONF_HTTP
 from db.io            import catch_ingress_error
 from utils.categories import TimeFrame, SymbolStatus
 
