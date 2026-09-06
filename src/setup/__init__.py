@@ -1,1 +1,0 @@
-from setup.main import setup

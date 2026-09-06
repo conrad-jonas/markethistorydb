@@ -1,0 +1,1 @@
+from markethistorydb.fetch.main import fetch
