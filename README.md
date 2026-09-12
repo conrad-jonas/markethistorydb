@@ -9,6 +9,8 @@ uv sync            # development (includes pytest, ruff)
 pip install .      # as a package
 ```
 
+Copy `.env.example` to `.env` and fill in `EODHD_API_TOKEN` and `QUESTDB_PASSWORD`.
+
 ## Usage
 
 ```
