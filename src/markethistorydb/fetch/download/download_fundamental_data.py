@@ -1,14 +1,15 @@
 
-from typing import Union
 import pandas as pd
 
+from markethistorydb.db               import tables
+from markethistorydb.fetch.eodhd.exchange_codes import NASDAQ, NYSE
 from markethistorydb.fetch.utils      import FundamentalType
 from markethistorydb.fetch.eodhd      import RequestFundamentalData
 from markethistorydb.fetch.write      import WriteFundamentalData
 from markethistorydb.utils.categories import TimeFrame, SymbolStatus
 
 # Exchanges for which fundamental data will be downloaded
-_EXCHANGE_CODES_WITH_FUNDAMENTALS = ["NASDAQ", "NYSE"]
+_EXCHANGE_CODES_WITH_FUNDAMENTALS = [NASDAQ, NYSE]
 
 
 class DownloadFundamentalData(object):
@@ -24,20 +25,20 @@ class DownloadFundamentalData(object):
             return True
         return False
 
-    def _get_fundamental_data(self, series_symbol: pd.Series) -> dict[FundamentalType, Union[pd.Series, pd.DataFrame]]:
+    def _get_fundamental_data(
+            self, series_symbol: pd.Series) -> tuple[pd.Series, dict[FundamentalType, pd.DataFrame]]:
         fundamental_data_requester = RequestFundamentalData(self.time_frame, series_symbol)
-        dict_fundamental = fundamental_data_requester.get()
-        return dict_fundamental
+        return fundamental_data_requester.get()
 
     def run(self, series_symbol: pd.Series) -> bool:
-        if not self._exchange_has_fundamental_data(series_symbol["exchange_code"]):
+        if not self._exchange_has_fundamental_data(series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]):
             return False
 
-        dict_fundamental = self._get_fundamental_data(series_symbol)
+        series_sector_and_industry, dict_fundamental = self._get_fundamental_data(series_symbol)
         if dict_fundamental:
-            self.writeFundamentalData.set_exchange_code(series_symbol["exchange_code"])
-            self.writeFundamentalData.set_symbol_code(series_symbol["symbol_code"])
-            self.writeFundamentalData.update_sector_data(dict_fundamental[FundamentalType.SECTOR_AND_INDUSTRY])
+            self.writeFundamentalData.set_exchange_code(series_symbol[tables.Symbol.Columns.EXCHANGE_CODE])
+            self.writeFundamentalData.set_symbol_code(series_symbol[tables.Symbol.Columns.SYMBOL_CODE])
+            self.writeFundamentalData.update_sector_data(series_sector_and_industry)
             self.writeFundamentalData.replace_fundamental_data(dict_fundamental)
             return True
         return False

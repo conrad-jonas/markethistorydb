@@ -2,13 +2,13 @@
 
 import pandas as pd
 
-from markethistorydb.db import Read, Insert, Update
+from markethistorydb.db import Read, Insert, Update, tables
 
 
 class WriteExchangeData(object):
     @staticmethod
     def _is_in_table_exchange(series_exchange: pd.Series) -> bool:
-        exchange_code = series_exchange["exchange_code"]
+        exchange_code = series_exchange[tables.Exchange.Columns.EXCHANGE_CODE]
         record_from_table = Read.exchange(exchange_code)
         return not record_from_table.empty
 

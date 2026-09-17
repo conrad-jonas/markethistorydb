@@ -1,11 +1,21 @@
 #!/usr/bin/env python12.9
 
+import markethistorydb.db.tables as tables
+
+_TABLE          = tables.Exchange.NAME
+_COLUMNS        = ", ".join(tables.Exchange.ALL_COLUMNS)
+_NAME           = tables.Exchange.Columns.NAME
+_EXCHANGE_CODE  = tables.Exchange.Columns.EXCHANGE_CODE
+_OPERATING_MIC  = tables.Exchange.Columns.OPERATING_MIC
+_COUNTRY        = tables.Exchange.Columns.COUNTRY
+_CURRENCY       = tables.Exchange.Columns.CURRENCY
+_COUNTRY_ISO_2  = tables.Exchange.Columns.COUNTRY_ISO_2
+_COUNTRY_ISO_3  = tables.Exchange.Columns.COUNTRY_ISO_3
+
 
 class StatementsExchange:
     UPDATE_EXCHANGE = (
-        "UPDATE exchange SET name=%s, operating_mic=%s, country=%s, currency=%s, country_iso_2=%s, country_iso_3=%s"
-        "WHERE exchange_code=%s")
+        f"UPDATE {_TABLE} SET {_NAME}=%s, {_OPERATING_MIC}=%s, {_COUNTRY}=%s, {_CURRENCY}=%s, "
+        f"{_COUNTRY_ISO_2}=%s, {_COUNTRY_ISO_3}=%s WHERE {_EXCHANGE_CODE}=%s")
 
-    SELECT_ALL_FROM_EXCHANGE_BY_EXCHANGE_CODE = (
-        "SELECT name, exchange_code, operating_mic, country, currency, country_iso_2, country_iso_3, created_at "
-        "FROM exchange WHERE exchange_code=%s")
+    SELECT_ALL_FROM_EXCHANGE_BY_EXCHANGE_CODE = f"SELECT {_COLUMNS} FROM {_TABLE} WHERE {_EXCHANGE_CODE}=%s"

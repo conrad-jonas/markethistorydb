@@ -7,14 +7,15 @@ import pandas as pd
 from markethistorydb.db                       import tables
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
 from markethistorydb.fetch.eodhd.config       import API_TOKEN
+from markethistorydb.fetch.eodhd.exchange_codes import NASDAQ, NYSE, NYSE_ARCA
 from markethistorydb.fetch.eodhd.request_data import RequestData
 from markethistorydb.utils.categories         import TimeFrame, SymbolStatus
 
 
 # US exchanges to download daily and intraday data from
 _US_EXCHANGE_URL_CODE = "US"
-_US_EXCHANGE_CODES_EOD = ["NASDAQ", "NYSE", "NYSE ARCA"]
-_US_EXCHANGE_CODES_MINUTE = ["NASDAQ", "NYSE"]
+_US_EXCHANGE_CODES_EOD = [NASDAQ, NYSE, NYSE_ARCA]
+_US_EXCHANGE_CODES_MINUTE = [NASDAQ, NYSE]
 
 
 class RequestSymbolData(RequestData):
@@ -23,22 +24,30 @@ class RequestSymbolData(RequestData):
         self._symbol_status: SymbolStatus = symbol_status
 
     def _get_url_for_symbol_data(self, exchange_url_code: str) -> str:
-        if self._symbol_status == SymbolStatus.ACTIVE:
-            url_exchange_symbols = "https://eodhd.com/api/exchange-symbol-list/{0}?".format(exchange_url_code)
-        else:
-            url_exchange_symbols = "https://eodhd.com/api/exchange-symbol-list/{0}?".format(exchange_url_code)
-        return url_exchange_symbols
+        return RequestData.Url.exchange_symbol_list(exchange_url_code)
 
     def _get_url_params_for_symbol_data(self) -> dict[str, str]:
-        if self._symbol_status == SymbolStatus.ACTIVE:
-            url_params = {"api_token": API_TOKEN, "fmt": "json"}
-        else:
-            url_params = {"api_token": API_TOKEN, "fmt": "json", "delisted": "1"}
+        url_params = {
+            RequestData.Params.API_TOKEN: API_TOKEN,
+            RequestData.Params.FMT: RequestData.Values.JSON,
+        }
+        if self._symbol_status != SymbolStatus.ACTIVE:
+            url_params[RequestData.Params.DELISTED] = RequestData.Values.DELISTED
         return url_params
 
+    # Maps eodhd.com API column names to their DB column name equivalent
+    _API_COLUMN_TO_DB_COLUMN = {
+        "Code":     tables.Symbol.Columns.SYMBOL_CODE,
+        "Name":     tables.Symbol.Columns.NAME,
+        "Country":  tables.Symbol.Columns.COUNTRY,
+        "Exchange": tables.Symbol.Columns.EXCHANGE_CODE,
+        "Currency": tables.Symbol.Columns.CURRENCY,
+        "Type":     tables.Symbol.Columns.TYPE,
+        "Isin":     tables.Symbol.Columns.ISIN,
+    }
+
     def _check_symbol_data(self, df_exchange_symbols: pd.DataFrame):
-        if not self._has_columns(df_exchange_symbols,
-                                 ["Code", "Name", "Country", "Exchange", "Currency", "Type", "Isin"]):
+        if not self._has_columns(df_exchange_symbols, list(self._API_COLUMN_TO_DB_COLUMN)):
             raise CompatibilityError("Symbol data has unexpected structure!")
 
     def _format_symbol_data(self, df_symbols: pd.DataFrame, exchange_url_code: str) -> pd.DataFrame:
@@ -49,13 +58,9 @@ class RequestSymbolData(RequestData):
         else:
             df_symbols_filtered = df_symbols
 
-        df_symbols_filtered = df_symbols_filtered.rename(
-            columns={"Code": tables.Symbol.Columns.SYMBOL_CODE, "Name": tables.Symbol.Columns.NAME,
-                     "Country": tables.Symbol.Columns.COUNTRY, "Exchange": tables.Symbol.Columns.EXCHANGE_CODE,
-                     "Currency": tables.Symbol.Columns.CURRENCY, "Type": tables.Symbol.Columns.TYPE,
-                     "Isin": tables.Symbol.Columns.ISIN})
-        df_symbols_filtered.insert(1, "time_frame", self._time_frame.name)
-        df_symbols_filtered.insert(2, "symbol_status", self._symbol_status.name)
+        df_symbols_filtered = df_symbols_filtered.rename(columns=self._API_COLUMN_TO_DB_COLUMN)
+        df_symbols_filtered.insert(1, tables.Symbol.Columns.TIME_FRAME, self._time_frame.name)
+        df_symbols_filtered.insert(2, tables.Symbol.Columns.SYMBOL_STATUS, self._symbol_status.name)
         df_symbols_filtered = df_symbols_filtered[tables.Symbol.ALL_COLUMNS[:-1]]
         return df_symbols_filtered
 

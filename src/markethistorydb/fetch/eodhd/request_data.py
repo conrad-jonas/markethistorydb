@@ -14,6 +14,9 @@ import time
 
 from markethistorydb.fetch.errors        import RequestError
 from markethistorydb.fetch.eodhd.errors  import ApiError, BadGatewayError, UnauthorizedError, ApiErrorCode
+from markethistorydb.fetch.utils         import FundamentalType
+
+logger = logging.getLogger(__name__)
 
 
 # Maximum number of retries after API connection error occurred
@@ -25,6 +28,40 @@ _WAIT_TIME_IN_SECS_AFTER_API_ERROR = 3600
 
 
 class RequestData(object):
+
+    class Url:
+        BASE = "https://eodhd.com/api"
+        EXCHANGES_LIST = f"{BASE}/exchanges-list/?"
+
+        @staticmethod
+        def exchange_symbol_list(exchange_url_code: str) -> str:
+            return f"{RequestData.Url.BASE}/exchange-symbol-list/{exchange_url_code}?"
+
+        @staticmethod
+        def eod(symbol_code: str, exchange_url_code: str) -> str:
+            return f"{RequestData.Url.BASE}/eod/{symbol_code}.{exchange_url_code}?"
+
+        @staticmethod
+        def intraday(symbol_code: str, exchange_url_code: str) -> str:
+            return f"{RequestData.Url.BASE}/intraday/{symbol_code}.{exchange_url_code}?"
+
+        @staticmethod
+        def fundamentals(symbol_code: str, exchange_url_code: str) -> str:
+            return f"{RequestData.Url.BASE}/fundamentals/{symbol_code}.{exchange_url_code}?"
+
+    class Params:
+        API_TOKEN = "api_token"
+        FMT = "fmt"
+        FROM = "from"
+        TO = "to"
+        INTERVAL = "interval"
+        DELISTED = "delisted"
+        FILTER = "filter"
+
+    class Values:
+        JSON = "json"
+        DELISTED = "1"
+        INTERVAL_1M = "1m"
 
     @staticmethod
     def _catch_request_error(func: Callable) -> Callable:
@@ -40,28 +77,28 @@ class RequestData(object):
                     return_value = func(*args, **kwargs)
                     break
                 except ApiError:
-                    logging.error("Exception ApiError occurred, wait 60 minutes till next try", exc_info=True)
+                    logger.error("Exception ApiError occurred, wait 60 minutes till next try", exc_info=True)
                     num_retries += 1
                     time.sleep(_WAIT_TIME_IN_SECS_AFTER_API_ERROR)
                 except UnauthorizedError:
-                    logging.error("Exception UnauthorizedError occurred")
+                    logger.error("Exception UnauthorizedError occurred")
                     num_retries += 1
                     time.sleep(_WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR)
                 except BadGatewayError:
-                    logging.error("Exception BadGatewayError occurred")
+                    logger.error("Exception BadGatewayError occurred")
                     num_retries += 1
                     time.sleep(_WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR)
                 except requests.exceptions.Timeout:
-                    logging.error("Exception Timeout occurred")
+                    logger.error("Exception Timeout occurred")
                     num_retries += 1
                     time.sleep(_WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR)
                 except requests.exceptions.ConnectionError:
-                    logging.error("Exception ConnectionError occurred")
+                    logger.error("Exception ConnectionError occurred")
                     num_retries += 1
                     time.sleep(_WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR)
             else:
-                logging.error("Max number of retries of calling function {0} exceeded".format(func))
-                raise RequestError
+                logger.error("Max number of retries of calling function {0} exceeded".format(func))
+                raise RequestError("Max number of retries of calling function {0} exceeded".format(func))
             return return_value
 
         return wrapper_catch_request_error
@@ -88,7 +125,7 @@ class RequestData(object):
             try:
                 data_request = response.json()
             except JSONDecodeError as error:
-                logging.error("Request status '{0}' with status code {1} occurred".format(
+                logger.error("Request status '{0}' with status code {1} occurred".format(
                     response.text, response.status_code))
                 raise error
         return data_request
@@ -100,5 +137,5 @@ class RequestData(object):
         return True
 
     @abstractmethod
-    def get(self, *args) -> pd.DataFrame | dict:
+    def get(self, *args: Any, **kwargs: Any) -> pd.DataFrame | tuple[pd.Series, dict[FundamentalType, pd.DataFrame]]:
         pass

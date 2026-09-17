@@ -11,33 +11,43 @@ from markethistorydb.db.io.query import Query
 
 class Delete:
     @staticmethod
+    def _execute_statements(statement_templates: tuple[str, ...], format_kwargs: dict,
+                            symbol_code: str, exchange_code: str):
+        """Executes each statement in *statement_templates* sequentially, since QuestDB expects one
+        statement per query. Only statements containing %s placeholders receive symbol/exchange params."""
+        for statement_template in statement_templates:
+            query = sql.SQL(statement_template).format(**format_kwargs)
+            params = [symbol_code, exchange_code] if "%s" in statement_template else []
+            Query.execute(query, params)
+
+    @staticmethod
     def _symbol_from_symbol_table(symbol_code: str, exchange_code: str, table_name: str, unique_key_columns: list[str]):
-        query_string = statements.Symbol.DROP_SYMBOL_FROM_TABLE
-        query = sql.SQL(query_string).format(table_name=sql.Identifier(table_name),
-                                             unique_key_column=sql.SQL(', ').join(
-                                                 map(sql.Literal, unique_key_columns)))
-        params = [symbol_code, exchange_code]
-        Query.execute(query, params)
+        format_kwargs = {
+            "table_name": sql.Identifier(table_name),
+            "table_name_copy": sql.Identifier(f"{table_name}_copy"),
+            "unique_key_columns": sql.SQL(', ').join(map(sql.Identifier, unique_key_columns)),
+        }
+        Delete._execute_statements(statements.Symbol.DROP_SYMBOL_FROM_TABLE, format_kwargs, symbol_code, exchange_code)
 
     @staticmethod
     def _symbol_from_fundamental_table(symbol_code: str, exchange_code: str, table_name: str, timestamp_column: str,
                                        unique_key_columns: list[str]):
-        query_string = statements.Fundamental.DROP_SYMBOL_FROM_TABLE
-        query = sql.SQL(query_string).format(table_name=sql.Identifier(table_name),
-                                             timestamp_column=sql.Identifier(timestamp_column),
-                                             unique_key_column=sql.SQL(', ').join(map(sql.Literal, unique_key_columns)))
-        params = [symbol_code, exchange_code]
-        Query.execute(query, params)
+        format_kwargs = {
+            "table_name": sql.Identifier(table_name),
+            "table_name_copy": sql.Identifier(f"{table_name}_copy"),
+            "timestamp_column": sql.Identifier(timestamp_column),
+            "unique_key_columns": sql.SQL(', ').join(map(sql.Identifier, unique_key_columns)),
+        }
+        Delete._execute_statements(statements.Fundamental.DROP_SYMBOL_FROM_TABLE, format_kwargs,
+                                   symbol_code, exchange_code)
 
     @staticmethod
     def _symbol_from_price_table(symbol_code: str, exchange_code: str, table_name: str):
         if table_name == tables.DailyOhlcv.NAME:
-            query_string = statements.Price.DROP_SYMBOL_FROM_DAILY_OHLCV
+            statement_templates = statements.Price.DROP_SYMBOL_FROM_DAILY_OHLCV
         else:
-            query_string = statements.Price.DROP_SYMBOL_FROM_MINUTE_OHLCV
-        query = sql.SQL(query_string)
-        params = [symbol_code, exchange_code]
-        Query.execute(query, params)
+            statement_templates = statements.Price.DROP_SYMBOL_FROM_MINUTE_OHLCV
+        Delete._execute_statements(statement_templates, {}, symbol_code, exchange_code)
 
     @staticmethod
     def symbol_from_table(symbol_code: str, exchange_code: str, table_name: str, timestamp_column: str,

@@ -40,8 +40,8 @@ class WriteFundamentalData(object):
 
     def _replace_fundamental_data_in_table(self, df_fundamental: pd.DataFrame, table: Type[tables.FundamentalTableType]):
         """Replaces historical fundamental table data for symbol into DB"""
-        df_fundamental["symbol_code"] = self._symbol_code
-        df_fundamental["exchange_code"] = self._exchange_code
+        df_fundamental[tables.EarningsQuarterly.Columns.SYMBOL_CODE] = self._symbol_code
+        df_fundamental[tables.EarningsQuarterly.Columns.EXCHANGE_CODE] = self._exchange_code
         df_fundamental = convert_df_column_names_from_camel_to_snake_case(df_fundamental)
         Delete.symbol_from_table(self._symbol_code, self._exchange_code,
                                  table.NAME,

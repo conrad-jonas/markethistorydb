@@ -1,7 +1,6 @@
 
 """Class for requesting data from provider and inserting it into DBs"""
 
-from datetime import datetime
 import logging
 import pandas as pd
 import pynput
@@ -11,14 +10,13 @@ from markethistorydb.fetch.download import DownloadExchangeData, DownloadFundame
 from markethistorydb.fetch.errors   import StorageError, UserInterruptError
 from markethistorydb.utils          import TimeFrame, SymbolStatus
 
+logger = logging.getLogger(__name__)
+
 
 # Minimum amount of free storage space on disk that is demanded before proceeding with downloading data
 _MIN_FREE_SPACE_IN_GB = 50
-# Minute data gets requested from start date to end
-_START_DATE_MINUTE_DATA = "01-01-2005"
-_END_DATE_MINUTE_DATA = datetime.today().strftime("%d-%m-%Y")
-# Minute data gets requested for the following time period in days
-_NUM_OF_DAYS_PER_MINUTE_DATA_REQUEST = 120
+# Number of bytes in a gigabyte, used to convert disk_usage()'s byte count
+_BYTES_PER_GB = 2**30
 
 
 class Fetcher(object):
@@ -56,8 +54,8 @@ class Fetcher(object):
     @staticmethod
     def _check_storage_space():
         """Checks if disk offers enough free storage space and if not so, raises error"""
-        free_space = shutil.disk_usage("/")[2]
-        free_space_in_gb = (free_space // (2**30))
+        free_space = shutil.disk_usage("/").free
+        free_space_in_gb = (free_space // _BYTES_PER_GB)
         if free_space_in_gb < _MIN_FREE_SPACE_IN_GB:
             raise StorageError("Not enough free disk storage space available (less than {0} GB)".format(
                                _MIN_FREE_SPACE_IN_GB))
@@ -74,13 +72,13 @@ class Fetcher(object):
         num_of_requested_exchanges = series_exchange_codes.shape if not self.target_exchange_name else 1
         self.num_of_requested_symbols = df_symbols.shape[0]
 
-        logging.info("Number of exchanges: {0}, Number of requested symbols {1}:".format(
+        logger.info("Number of exchanges: {0}, Number of requested symbols {1}:".format(
             num_of_requested_exchanges, self.num_of_requested_symbols))
 
     def run(self):
         """Requests data from EODHD and inserts it into DB"""
-        logging.info("")
-        logging.info("Requests {0} data of {1} symbols from eodhd.com".format(self.time_frame.name,
+        logger.info("")
+        logger.info("Requests {0} data of {1} symbols from eodhd.com".format(self.time_frame.name,
                                                                               self.symbol_status.name))
         # Downloads exchange data
         series_exchange_url_codes = self._downloadExchangeData.run()

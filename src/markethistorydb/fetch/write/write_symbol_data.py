@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from markethistorydb.db               import Read, Insert, Update
+from markethistorydb.db               import Read, Insert, Update, tables
 from markethistorydb.utils.categories import TimeFrame, SymbolStatus
 
 
@@ -12,8 +12,8 @@ class WriteSymbolData(object):
         self._symbol_status: SymbolStatus = symbol_status
 
     def _is_in_table_symbol(self, series_symbol: pd.Series) -> bool:
-        symbol_code = series_symbol["symbol_code"]
-        exchange_code = series_symbol["exchange_code"]
+        symbol_code = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
+        exchange_code = series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]
         record_from_table = Read.symbol(symbol_code, exchange_code, self._time_frame, self._symbol_status)
         return not record_from_table.empty
 

@@ -3,9 +3,12 @@ from datetime import datetime, timedelta
 import logging
 import pandas as pd
 
+from markethistorydb.db               import tables
 from markethistorydb.fetch.eodhd      import RequestPriceData
 from markethistorydb.fetch.write      import WritePriceData
 from markethistorydb.utils.categories import TimeFrame, SymbolStatus
+
+logger = logging.getLogger(__name__)
 
 # Minute data gets requested from start date to end
 _START_DATE_MINUTE_DATA = "01-01-2005"
@@ -83,9 +86,9 @@ class DownloadPriceData(object):
         return df_symbol
 
     def _print_no_data_for_symbol(self, series_symbol: pd.Series):
-        symbol_code = series_symbol["symbol_code"]
-        exchange_code = series_symbol["exchange_code"]
-        logging.info("No data exists for symbol {0} ({1}, {2}, {3})".format(
+        symbol_code = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
+        exchange_code = series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]
+        logger.info("No data exists for symbol {0} ({1}, {2}, {3})".format(
             symbol_code, exchange_code, self.time_frame.name, self.symbol_status.name))
 
     def run(self, series_symbol: pd.Series) -> bool:
