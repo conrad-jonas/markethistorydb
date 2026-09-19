@@ -8,12 +8,12 @@ import pandas as pd
 from markethistorydb.db                       import tables
 from markethistorydb.fetch.utils              import FundamentalType, convert_df_column_names_from_camel_to_snake_case
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
-from markethistorydb.fetch.eodhd.config       import API_TOKEN
 from markethistorydb.fetch.eodhd.request_data import RequestData
-from markethistorydb.utils.categories         import TimeFrame
+from markethistorydb.utils         import TimeFrame
 
 class RequestFundamentalData(RequestData):
-    def __init__(self, time_frame: TimeFrame, series_symbol: pd.Series):
+    def __init__(self, api_token: str, time_frame: TimeFrame, series_symbol: pd.Series):
+        self._api_token: str = api_token
         self._time_frame: TimeFrame = time_frame
         self._symbol_code: str = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
         self._exchange_url_code: str = series_symbol["exchange_url_code"]
@@ -21,13 +21,12 @@ class RequestFundamentalData(RequestData):
     def _get_url_for_fundamental_data(self) -> str:
         return RequestData.Url.fundamentals(self._symbol_code, self._exchange_url_code)
 
-    @staticmethod
-    def _get_url_params_for_fundamental_data() -> dict[str, str]:
+    def _get_url_params_for_fundamental_data(self) -> dict[str, str]:
         filter_value = ("General::Sector,General::Industry,General::GicSector,General::GicGroup,General::GicIndustry,"
                         "General::GicSubIndustry,Earnings::History,Earnings::Annual,Financials::Balance_Sheet,"
                         "Financials::Cash_Flow,Financials::Income_Statement")
         url_params = {
-            RequestData.Params.API_TOKEN: API_TOKEN,
+            RequestData.Params.API_TOKEN: self._api_token,
             RequestData.Params.FMT: RequestData.Values.JSON,
             RequestData.Params.FILTER: filter_value,
         }

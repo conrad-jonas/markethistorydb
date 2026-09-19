@@ -1,23 +1,23 @@
 
 import pandas as pd
 
-from markethistorydb.db               import tables
-from markethistorydb.fetch.eodhd.exchange_codes import NASDAQ, NYSE
-from markethistorydb.fetch.utils      import FundamentalType
-from markethistorydb.fetch.eodhd      import RequestFundamentalData
-from markethistorydb.fetch.write      import WriteFundamentalData
-from markethistorydb.utils.categories import TimeFrame, SymbolStatus
+from markethistorydb.db          import Database, tables
+from markethistorydb.fetch.utils import FundamentalType
+from markethistorydb.fetch.eodhd import ExchangeCodes, RequestFundamentalData
+from markethistorydb.fetch.write import WriteFundamentalData
+from markethistorydb.utils       import TimeFrame, SymbolStatus
 
 # Exchanges for which fundamental data will be downloaded
-_EXCHANGE_CODES_WITH_FUNDAMENTALS = [NASDAQ, NYSE]
+_EXCHANGE_CODES_WITH_FUNDAMENTALS = [ExchangeCodes.NASDAQ, ExchangeCodes.NYSE]
 
 
 class DownloadFundamentalData(object):
-    def __init__(self, time_frame: TimeFrame, symbol_status: SymbolStatus):
+    def __init__(self, db: Database, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus):
+        self._api_token:            str       = api_token
         self.time_frame:            TimeFrame = time_frame
         self.symbol_status:      SymbolStatus = symbol_status
 
-        self.writeFundamentalData = WriteFundamentalData()
+        self.writeFundamentalData = WriteFundamentalData(db)
 
     @staticmethod
     def _exchange_has_fundamental_data(exchange_code: str) -> bool:
@@ -27,7 +27,7 @@ class DownloadFundamentalData(object):
 
     def _get_fundamental_data(
             self, series_symbol: pd.Series) -> tuple[pd.Series, dict[FundamentalType, pd.DataFrame]]:
-        fundamental_data_requester = RequestFundamentalData(self.time_frame, series_symbol)
+        fundamental_data_requester = RequestFundamentalData(self._api_token, self.time_frame, series_symbol)
         return fundamental_data_requester.get()
 
     def run(self, series_symbol: pd.Series) -> bool:

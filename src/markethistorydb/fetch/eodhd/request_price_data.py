@@ -7,12 +7,12 @@ import pandas as pd
 
 from markethistorydb.db                       import tables
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
-from markethistorydb.fetch.eodhd.config       import API_TOKEN
 from markethistorydb.fetch.eodhd.request_data import RequestData
-from markethistorydb.utils.categories         import TimeFrame
+from markethistorydb.utils         import TimeFrame
 
 class RequestPriceData(RequestData):
-    def __init__(self, time_frame: TimeFrame, series_symbol: pd.Series):
+    def __init__(self, api_token: str, time_frame: TimeFrame, series_symbol: pd.Series):
+        self._api_token:         str = api_token
         self._time_frame:  TimeFrame = time_frame
         self._symbol_code:       str = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
         self._exchange_code:     str = series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]
@@ -27,7 +27,7 @@ class RequestPriceData(RequestData):
 
     def _get_url_params_for_price_data(self, start_datetime: datetime | None, end_datetime: datetime | None) -> dict[str, str]:
         url_params = {
-            RequestData.Params.API_TOKEN: API_TOKEN,
+            RequestData.Params.API_TOKEN: self._api_token,
             RequestData.Params.FMT: RequestData.Values.JSON,
         }
         if self._time_frame == TimeFrame.DAILY:

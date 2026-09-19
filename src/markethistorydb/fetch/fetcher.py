@@ -1,11 +1,12 @@
 
 """Class for requesting data from provider and inserting it into DBs"""
 
+from typing import Callable
 import logging
 import pandas as pd
-import pynput
 import shutil
 
+from markethistorydb.db                import Database
 from markethistorydb.fetch.download import DownloadExchangeData, DownloadFundamentalData, DownloadPriceData, DownloadSymbolData
 from markethistorydb.fetch.errors   import StorageError, UserInterruptError
 from markethistorydb.utils          import TimeFrame, SymbolStatus
@@ -20,35 +21,25 @@ _BYTES_PER_GB = 2**30
 
 
 class Fetcher(object):
-    def __init__(self, time_frame: TimeFrame, symbol_status: SymbolStatus, target_exchange_name: str | None = None):
+    def __init__(self, db: Database, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus,
+                 target_exchange_name: str | None = None, should_stop: Callable[[], bool] | None = None):
         self.time_frame:            TimeFrame = time_frame
         self.symbol_status:      SymbolStatus = symbol_status
         self.target_exchange_name: str | None = target_exchange_name
 
-        # Flag that set to True on pressing F4 to exit script at specific position
-        self._script_must_exit = False
+        # Polled at specific positions; returning True aborts the run with UserInterruptError
+        self._should_stop: Callable[[], bool] = should_stop or (lambda: False)
         # Metric on how many symbols data has been downloaded for
         self.num_of_requested_symbols   = 0
         # Download handlers
-        self._downloadExchangeData      = DownloadExchangeData(self.time_frame, self.target_exchange_name)
-        self._downloadSymbolData        = DownloadSymbolData(self.time_frame, self.symbol_status)
-        self._downloadPriceData         = DownloadPriceData(self.time_frame, self.symbol_status)
-        self._downloadFundamentalData   = DownloadFundamentalData(self.time_frame, self.symbol_status)
-
-        self._init_keyboard_listener()
-
-    def _init_keyboard_listener(self):
-        """Sets up listener to catch key press e.g. for exiting script at specific positions"""
-        listener = pynput.keyboard.Listener(on_press=self._handle_on_press)
-        listener.start()
-
-    def _handle_on_press(self, key):
-        if key == pynput.keyboard.Key.f4:
-            self._script_must_exit = True
+        self._downloadExchangeData      = DownloadExchangeData(db, api_token, self.time_frame, self.target_exchange_name)
+        self._downloadSymbolData        = DownloadSymbolData(db, api_token, self.time_frame, self.symbol_status)
+        self._downloadPriceData         = DownloadPriceData(db, api_token, self.time_frame, self.symbol_status)
+        self._downloadFundamentalData   = DownloadFundamentalData(db, api_token, self.time_frame, self.symbol_status)
 
     def _check_user_interrupt(self):
-        if self._script_must_exit:
-            # User has entered key to exit script
+        if self._should_stop():
+            # Caller requested to exit
             raise UserInterruptError("User interrupted process")
 
     @staticmethod

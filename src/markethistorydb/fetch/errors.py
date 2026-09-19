@@ -4,7 +4,7 @@
 
 from enum import IntEnum
 
-from markethistorydb.utils.error import Error
+from markethistorydb.utils import Error
 
 
 class ErrorCode(IntEnum):

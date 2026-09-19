@@ -2,9 +2,13 @@
 
 """Requests trading data from eodhd.com and inserts it into DB"""
 
+from typing import Callable
 import logging
 import sys
+import threading
 
+from markethistorydb.config           import Config
+from markethistorydb.db               import Database
 from markethistorydb.fetch.fetcher    import Fetcher
 from markethistorydb.fetch.errors     import ErrorCode, StorageError, UserInterruptError, RequestError, InsertError
 from markethistorydb.utils.categories import TimeFrame, SymbolStatus
@@ -17,9 +21,22 @@ def _print_metrics(total_num_of_requested_symbols: int):
     logger.info("")
     logger.info("Total number of requested symbols: {0}".format(total_num_of_requested_symbols))
 
-def fetch(target_time_frame: TimeFrame = None, target_symbol_status: SymbolStatus = None,
-          target_exchange_name: str = None):
+def _start_f4_listener() -> Callable[[], bool]:
+    """Starts keyboard listener; returns callable telling whether F4 has been pressed"""
+    from pynput import keyboard
+    pressed = threading.Event()
+
+    def on_press(key):
+        if key == keyboard.Key.f4:
+            pressed.set()
+
+    keyboard.Listener(on_press=on_press).start()
+    return pressed.is_set
+
+def fetch(config: Config, target_time_frame: TimeFrame = None, target_symbol_status: SymbolStatus = None,
+          target_exchange_name: str = None, should_stop: Callable[[], bool] | None = None):
     """Fetches data from eodhd.com and inserts it into DB."""
+    db = Database(config)
     total_num_of_requested_symbols = 0
     for time_frame in TimeFrame:
         if target_time_frame and time_frame != target_time_frame:
@@ -27,7 +44,8 @@ def fetch(target_time_frame: TimeFrame = None, target_symbol_status: SymbolStatu
         for symbol_status in SymbolStatus:
             if target_symbol_status and symbol_status != target_symbol_status:
                 continue
-            fetcher = Fetcher(time_frame, symbol_status, target_exchange_name)
+            fetcher = Fetcher(db, config.eodhd_api_token, time_frame, symbol_status, target_exchange_name,
+                              should_stop)
             fetcher.run()
             total_num_of_requested_symbols += fetcher.num_of_requested_symbols
     _print_metrics(total_num_of_requested_symbols)
@@ -38,7 +56,8 @@ def main(target_time_frame: TimeFrame = None, target_symbol_status: SymbolStatus
     """Runs fetch() and maps errors to process exit codes."""
     start_logger()
     try:
-        fetch(target_time_frame, target_symbol_status, target_exchange_name)
+        fetch(Config.from_env(), target_time_frame, target_symbol_status, target_exchange_name,
+              should_stop=_start_f4_listener())
     except StorageError:
         logger.error("StorageError", exc_info=True)
         sys.exit(ErrorCode.STORAGE_ERROR)

@@ -11,8 +11,10 @@ from markethistorydb.db.io.query import Query
 
 
 class Update:
-    @staticmethod
-    def exchange(series_exchange: pd.Series):
+    def __init__(self, query: Query):
+        self._query = query
+
+    def exchange(self, series_exchange: pd.Series):
         query = sql.SQL(statements.Exchange.UPDATE_EXCHANGE)
         params = [
             series_exchange[tables.Exchange.Columns.NAME],
@@ -23,12 +25,11 @@ class Update:
             series_exchange[tables.Exchange.Columns.COUNTRY_ISO_3],
             series_exchange[tables.Exchange.Columns.EXCHANGE_CODE]
         ]
-        rows = Query.execute(query, params)
+        rows = self._query.execute(query, params)
         # One combination of arguments in table expected
         assert len(rows) == 0
 
-    @staticmethod
-    def symbol(series_symbol: pd.Series):
+    def symbol(self, series_symbol: pd.Series):
         query = sql.SQL(statements.Symbol.UPDATE_SYMBOL)
         params = [
             series_symbol[tables.Symbol.Columns.NAME],
@@ -40,12 +41,11 @@ class Update:
             series_symbol[tables.Symbol.Columns.TIME_FRAME],
             series_symbol[tables.Symbol.Columns.SYMBOL_STATUS]
         ]
-        rows = Query.execute(query, params)
+        rows = self._query.execute(query, params)
         # One combination of arguments in table expected
         assert len(rows) == 0
 
-    @staticmethod
-    def sector(series_symbol: pd.Series):
+    def sector(self, series_symbol: pd.Series):
         query = sql.SQL(statements.Symbol.UPDATE_SECTOR)
         params = [
             series_symbol[tables.Sector.Columns.SECTOR],
@@ -57,6 +57,6 @@ class Update:
             series_symbol[tables.Sector.Columns.SYMBOL_CODE],
             series_symbol[tables.Sector.Columns.EXCHANGE_CODE],
         ]
-        rows = Query.execute(query, params)
+        rows = self._query.execute(query, params)
         # One combination of arguments in table expected
         assert len(rows) == 0

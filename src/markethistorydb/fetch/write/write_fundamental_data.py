@@ -5,12 +5,13 @@
 import pandas as pd
 from typing import Type
 
-from markethistorydb.db           import tables, Read, Insert, Update, Delete
+from markethistorydb.db           import tables, Database
 from markethistorydb.fetch.utils  import FundamentalType, convert_df_column_names_from_camel_to_snake_case
 
 
 class WriteFundamentalData(object):
-    def __init__(self):
+    def __init__(self, db: Database):
+        self._db: Database = db
         self._symbol_code: str | None = None
         self._exchange_code: str | None = None
 
@@ -28,28 +29,28 @@ class WriteFundamentalData(object):
         return series_sector_and_industry
 
     def _is_in_table_sector(self) -> bool:
-        record_from_table = Read.sector(self._symbol_code, self._exchange_code)
+        record_from_table = self._db.read.sector(self._symbol_code, self._exchange_code)
         return not record_from_table.empty
 
     def update_sector_data(self, series_sector_and_industry: pd.Series):
         series_sector_and_industry = self._format_sector_data(series_sector_and_industry)
         if not self._is_in_table_sector():
-            Insert.sector(series_sector_and_industry)
+            self._db.insert.sector(series_sector_and_industry)
         else:
-            Update.sector(series_sector_and_industry)
+            self._db.update.sector(series_sector_and_industry)
 
     def _replace_fundamental_data_in_table(self, df_fundamental: pd.DataFrame, table: Type[tables.FundamentalTableType]):
         """Replaces historical fundamental table data for symbol into DB"""
         df_fundamental[tables.EarningsQuarterly.Columns.SYMBOL_CODE] = self._symbol_code
         df_fundamental[tables.EarningsQuarterly.Columns.EXCHANGE_CODE] = self._exchange_code
         df_fundamental = convert_df_column_names_from_camel_to_snake_case(df_fundamental)
-        Delete.symbol_from_table(self._symbol_code, self._exchange_code,
-                                 table.NAME,
-                                 table.TIMESTAMP_COLUMN,
-                                 table.UNIQUE_KEY_COLUMNS)
-        Insert.table(df_fundamental,
-                     table.NAME,
-                     table.TIMESTAMP_COLUMN)
+        self._db.delete.symbol_from_table(self._symbol_code, self._exchange_code,
+                                          table.NAME,
+                                          table.TIMESTAMP_COLUMN,
+                                          table.UNIQUE_KEY_COLUMNS)
+        self._db.insert.table(df_fundamental,
+                              table.NAME,
+                              table.TIMESTAMP_COLUMN)
 
     def replace_fundamental_data(self, dict_symbol_fundamental: dict[FundamentalType, pd.DataFrame]):
         self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.EARNINGS_QUARTERLY],

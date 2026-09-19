@@ -6,20 +6,21 @@ from datetime import datetime
 from questdb.ingress import IngressError
 import pandas as pd
 
-from markethistorydb.db                import Read, Insert, tables
+from markethistorydb.db                import Database, tables
 from markethistorydb.fetch.errors      import InsertError
-from markethistorydb.utils.categories  import TimeFrame, SymbolStatus
+from markethistorydb.utils  import TimeFrame, SymbolStatus
 
 
 class WritePriceData(object):
-    def __init__(self, time_frame: TimeFrame, symbol_status: SymbolStatus):
+    def __init__(self, db: Database, time_frame: TimeFrame, symbol_status: SymbolStatus):
+        self._db: Database = db
         self._time_frame: TimeFrame = time_frame
         self._symbol_status: SymbolStatus = symbol_status
 
     def get_last_datetime_of_price_data(self, series_symbol: pd.Series) -> datetime | None:
         symbol_code = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
         exchange_code = series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]
-        df_existing_ohlcv = Read.newest_of_ohlcv({exchange_code: [symbol_code]}, self._time_frame)
+        df_existing_ohlcv = self._db.read.newest_of_ohlcv({exchange_code: [symbol_code]}, self._time_frame)
         try:
             last_datetime = df_existing_ohlcv.iloc[0]["timestamp"].to_pydatetime()
         except IndexError:
@@ -30,6 +31,6 @@ class WritePriceData(object):
         symbol_code = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
         exchange_code = series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]
         try:
-            Insert.ohlcv(df_price, symbol_code, exchange_code, self._time_frame, self._symbol_status)
+            self._db.insert.ohlcv(df_price, symbol_code, exchange_code, self._time_frame, self._symbol_status)
         except IngressError:
             raise InsertError

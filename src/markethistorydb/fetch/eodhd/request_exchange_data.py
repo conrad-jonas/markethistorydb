@@ -6,9 +6,8 @@ import pandas as pd
 
 from markethistorydb.db                       import tables
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
-from markethistorydb.fetch.eodhd.config       import API_TOKEN
 from markethistorydb.fetch.eodhd.request_data import RequestData
-from markethistorydb.utils.categories         import TimeFrame
+from markethistorydb.utils         import TimeFrame
 
 
 # Exchanges to download daily and intraday data from
@@ -32,17 +31,17 @@ class RequestExchangeData(RequestData):
         "CountryISO3":  tables.Exchange.Columns.COUNTRY_ISO_3,
     }
 
-    def __init__(self, time_frame: TimeFrame):
+    def __init__(self, api_token: str, time_frame: TimeFrame):
+        self._api_token: str = api_token
         self._time_frame: TimeFrame = time_frame
 
     @staticmethod
     def _get_url_for_exchanges_data() -> str:
         return RequestData.Url.EXCHANGES_LIST
 
-    @staticmethod
-    def _get_url_params_for_exchanges_data() -> dict[str, str]:
+    def _get_url_params_for_exchanges_data(self) -> dict[str, str]:
         return {
-            RequestData.Params.API_TOKEN: API_TOKEN,
+            RequestData.Params.API_TOKEN: self._api_token,
             RequestData.Params.FMT: RequestData.Values.JSON,
         }
 

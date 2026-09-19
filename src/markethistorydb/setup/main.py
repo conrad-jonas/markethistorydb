@@ -6,7 +6,7 @@ from pathlib import Path
 import logging
 import psycopg as pg
 
-from markethistorydb.db     import config
+from markethistorydb.config import Config
 from markethistorydb.utils  import start_logger
 
 logger = logging.getLogger(__name__)
@@ -25,9 +25,9 @@ def _get_setup_statements(schema_file_name: str) -> str:
     with open(filepath_schema, "r") as file:
         return file.read()
 
-def setup():
-    """Sets up QuestDB tables"""
-    with pg.connect(config.QUESTDB_CONF_PSYCOPG, autocommit=True) as connection:
+def setup(config: Config):
+    """Sets up QuestDB tables (drops existing ones)"""
+    with pg.connect(config.psycopg_conninfo, autocommit=True) as connection:
         with connection.cursor() as cur:
             logger.info("Setting up tables")
             for schema_file_name in _SCHEMA_FILE_NAMES:
@@ -41,7 +41,7 @@ def main():
     user_input = input("")
     if user_input.lower() in _CONFIRMATION_ANSWERS:
         logger.info("Answer is '{0}', continue setting up DB...".format(user_input.lower()))
-        setup()
+        setup(Config.from_env())
     else:
         logger.info("Answer is '{0}', exiting...".format(user_input.lower()))
 

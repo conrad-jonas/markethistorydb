@@ -1,6 +1,6 @@
 #!/usr/bin/env python12.9
 
-from markethistorydb.db.tables import Table
+from markethistorydb.db.tables.table import Table
 
 
 class TableDailyOhlcv(Table):

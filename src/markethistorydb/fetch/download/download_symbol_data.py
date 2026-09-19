@@ -2,18 +2,20 @@
 import logging
 import pandas as pd
 
+from markethistorydb.db                 import Database
 from markethistorydb.fetch.eodhd        import RequestSymbolData
-from markethistorydb.utils.categories   import TimeFrame, SymbolStatus
+from markethistorydb.utils   import TimeFrame, SymbolStatus
 from markethistorydb.fetch.write        import WriteSymbolData
 
 logger = logging.getLogger(__name__)
 
 class DownloadSymbolData(object):
-    def __init__(self, time_frame: TimeFrame, symbol_status: SymbolStatus):
+    def __init__(self, db: Database, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus):
+        self._api_token:           str        = api_token
         self.time_frame:           TimeFrame  = time_frame
         self.symbol_status:      SymbolStatus = symbol_status
 
-        self.writeSymbolData = WriteSymbolData(time_frame, symbol_status)
+        self.writeSymbolData = WriteSymbolData(db, time_frame, symbol_status)
 
     @staticmethod
     def _print_symbol_metrics(exchange_url_code: str, number_of_symbols: int):
@@ -22,7 +24,7 @@ class DownloadSymbolData(object):
 
     def _get_symbol_data(self, series_exchange_url_codes: pd.Series) -> pd.DataFrame:
         dfs_exchange_symbols: list[pd.DataFrame] = []
-        symbol_data_requester = RequestSymbolData(self.time_frame, self.symbol_status)
+        symbol_data_requester = RequestSymbolData(self._api_token, self.time_frame, self.symbol_status)
         for exchange_url_code in series_exchange_url_codes:
             df_exchange_symbols = symbol_data_requester.get(exchange_url_code)
             self._print_symbol_metrics(exchange_url_code, df_exchange_symbols.shape[0])

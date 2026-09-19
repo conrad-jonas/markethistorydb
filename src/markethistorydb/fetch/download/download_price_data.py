@@ -3,26 +3,26 @@ from datetime import datetime, timedelta
 import logging
 import pandas as pd
 
-from markethistorydb.db               import tables
+from markethistorydb.db               import Database, tables
 from markethistorydb.fetch.eodhd      import RequestPriceData
 from markethistorydb.fetch.write      import WritePriceData
-from markethistorydb.utils.categories import TimeFrame, SymbolStatus
+from markethistorydb.utils import TimeFrame, SymbolStatus
 
 logger = logging.getLogger(__name__)
 
 # Minute data gets requested from start date to end
 _START_DATE_MINUTE_DATA = "01-01-2005"
-_END_DATE_MINUTE_DATA = datetime.today().strftime("%d-%m-%Y")
 # Minute data gets requested for the following time period in days
 _NUM_OF_DAYS_PER_MINUTE_DATA_REQUEST = 120
 
 
 class DownloadPriceData(object):
-    def __init__(self, time_frame: TimeFrame, symbol_status: SymbolStatus):
+    def __init__(self, db: Database, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus):
+        self._api_token:            str       = api_token
         self.time_frame:            TimeFrame = time_frame
         self.symbol_status:      SymbolStatus = symbol_status
 
-        self.writePriceData = WritePriceData(time_frame, symbol_status)
+        self.writePriceData = WritePriceData(db, time_frame, symbol_status)
 
     def _get_start_datetime(self, series_symbol: pd.Series) -> datetime | None:
         start_datetime = None
@@ -38,7 +38,7 @@ class DownloadPriceData(object):
     def _get_daily_price_data(self, series_symbol: pd.Series,
                               start_datetime: datetime | None = None) -> pd.DataFrame:
         """Requests and returns daily price data from eodhd.com"""
-        price_data_requester = RequestPriceData(self.time_frame, series_symbol)
+        price_data_requester = RequestPriceData(self._api_token, self.time_frame, series_symbol)
         return price_data_requester.get(start_datetime)
 
     @staticmethod
@@ -50,16 +50,18 @@ class DownloadPriceData(object):
         """
         # Contains the start and end datetime for each minute data request
         minute_data_time_periods: list[tuple[datetime, datetime]] = []
+        # End of the whole time period is today (evaluated per call, not at import)
+        end_datetime = datetime.combine(datetime.today().date(), datetime.min.time())
         # Start datetime of request for the chronically first time period
         if start_datetime:
             request_start_datetime = start_datetime
         else:
             request_start_datetime = datetime.strptime(_START_DATE_MINUTE_DATA, "%d-%m-%Y")
         # Loops over whole time period for which minute data should be requested
-        while request_start_datetime < datetime.strptime(_END_DATE_MINUTE_DATA, "%d-%m-%Y"):
+        while request_start_datetime < end_datetime:
             request_end_datetime = request_start_datetime + timedelta(days=_NUM_OF_DAYS_PER_MINUTE_DATA_REQUEST)
-            if request_end_datetime > datetime.strptime(_END_DATE_MINUTE_DATA, "%d-%m-%Y"):
-                request_end_datetime = datetime.strptime(_END_DATE_MINUTE_DATA, "%d-%m-%Y")
+            if request_end_datetime > end_datetime:
+                request_end_datetime = end_datetime
             minute_data_time_periods.append((request_start_datetime, request_end_datetime))
             request_start_datetime = request_end_datetime
 
@@ -78,7 +80,7 @@ class DownloadPriceData(object):
             self._get_time_periods_for_minute_data_requests(start_datetime))
 
         dfs_symbol_for_all_time_periods: list[pd.DataFrame] = []
-        price_data_requester = RequestPriceData(self.time_frame, series_symbol)
+        price_data_requester = RequestPriceData(self._api_token, self.time_frame, series_symbol)
         for start_time_period, end_time_period in minute_data_time_periods:
             dfs_symbol_for_all_time_periods.append(price_data_requester.get(start_time_period, end_time_period))
         df_symbol: pd.DataFrame = pd.concat(dfs_symbol_for_all_time_periods)

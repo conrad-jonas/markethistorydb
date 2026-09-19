@@ -1,1 +1,3 @@
-from markethistorydb.fetch.main import fetch
+
+from markethistorydb.fetch.errors  import ErrorCode, StorageError, RequestError, UserInterruptError, InsertError
+from markethistorydb.fetch.fetcher import Fetcher

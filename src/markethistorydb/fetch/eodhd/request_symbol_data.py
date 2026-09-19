@@ -6,20 +6,20 @@ import pandas as pd
 
 from markethistorydb.db                       import tables
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
-from markethistorydb.fetch.eodhd.config       import API_TOKEN
-from markethistorydb.fetch.eodhd.exchange_codes import NASDAQ, NYSE, NYSE_ARCA
+from markethistorydb.fetch.eodhd.exchange_codes import ExchangeCodes
 from markethistorydb.fetch.eodhd.request_data import RequestData
-from markethistorydb.utils.categories         import TimeFrame, SymbolStatus
+from markethistorydb.utils         import TimeFrame, SymbolStatus
 
 
 # US exchanges to download daily and intraday data from
 _US_EXCHANGE_URL_CODE = "US"
-_US_EXCHANGE_CODES_EOD = [NASDAQ, NYSE, NYSE_ARCA]
-_US_EXCHANGE_CODES_MINUTE = [NASDAQ, NYSE]
+_US_EXCHANGE_CODES_EOD = [ExchangeCodes.NASDAQ, ExchangeCodes.NYSE, ExchangeCodes.NYSE_ARCA]
+_US_EXCHANGE_CODES_MINUTE = [ExchangeCodes.NASDAQ, ExchangeCodes.NYSE]
 
 
 class RequestSymbolData(RequestData):
-    def __init__(self, time_frame: TimeFrame, symbol_status: SymbolStatus):
+    def __init__(self, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus):
+        self._api_token:         str = api_token
         self._time_frame:       TimeFrame = time_frame
         self._symbol_status: SymbolStatus = symbol_status
 
@@ -28,7 +28,7 @@ class RequestSymbolData(RequestData):
 
     def _get_url_params_for_symbol_data(self) -> dict[str, str]:
         url_params = {
-            RequestData.Params.API_TOKEN: API_TOKEN,
+            RequestData.Params.API_TOKEN: self._api_token,
             RequestData.Params.FMT: RequestData.Values.JSON,
         }
         if self._symbol_status != SymbolStatus.ACTIVE:

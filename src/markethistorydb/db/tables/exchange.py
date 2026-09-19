@@ -1,4 +1,4 @@
-from markethistorydb.db.tables import Table
+from markethistorydb.db.tables.table import Table
 
 class TableExchange(Table):
     """Constants for the 'exchange' table."""
