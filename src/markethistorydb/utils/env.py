@@ -1,11 +1,7 @@
 
-"""Loads .env file and provides access to required environment variables"""
+"""Provides access to required environment variables"""
 
 import os
-
-from dotenv import load_dotenv
-
-load_dotenv()
 
 
 def require_env(name: str) -> str:

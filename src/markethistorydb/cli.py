@@ -1,8 +1,14 @@
 """Command line interface: `markethistorydb fetch|setup`"""
 
+from typing import Callable
 import argparse
+import logging
+import sys
+import threading
 
-from markethistorydb.utils.categories import SymbolStatus, TimeFrame
+from markethistorydb.utils import SymbolStatus, TimeFrame
+
+logger = logging.getLogger(__name__)
 
 
 def _enum_arg(enum_cls):
@@ -26,15 +32,63 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("setup", help="set up the QuestDB tables (asks for confirmation)")
     return parser
 
+# Answers to the "continue?" prompt that are treated as confirmation
+_CONFIRMATION_ANSWERS = ("yes", "y")
+
+
+def _start_f4_listener() -> Callable[[], bool]:
+    """Starts keyboard listener; returns callable telling whether F4 has been pressed"""
+    from pynput import keyboard
+    pressed = threading.Event()
+
+    def on_press(key):
+        if key == keyboard.Key.f4:
+            pressed.set()
+
+    keyboard.Listener(on_press=on_press).start()
+    return pressed.is_set
+
+def _fetch(client, args: argparse.Namespace):
+    """Runs fetch and maps errors to process exit codes"""
+    from markethistorydb.fetch import ErrorCode, StorageError, UserInterruptError, RequestError, InsertError
+    try:
+        client.fetch(args.time_frame, args.symbol_status, args.exchange, should_stop=_start_f4_listener())
+    except StorageError:
+        logger.error("StorageError", exc_info=True)
+        sys.exit(ErrorCode.STORAGE_ERROR)
+    except UserInterruptError:
+        logger.error("UserInterruptError", exc_info=True)
+        sys.exit(ErrorCode.USER_INTERRUPT_ERROR)
+    except RequestError:
+        logger.error("RequestError", exc_info=True)
+        sys.exit(ErrorCode.REQUEST_ERROR)
+    except InsertError:
+        logger.error("InsertError", exc_info=True)
+        sys.exit(ErrorCode.QUESTDB_INGRESS_ERROR)
+
+def _setup(client):
+    """Asks for confirmation, then sets up QuestDB"""
+    logger.warning("Do you want to continue? If DB already exist, it will be deleted! (yes/y): ")
+    user_input = input("")
+    if user_input.lower() in _CONFIRMATION_ANSWERS:
+        logger.info("Answer is '{0}', continue setting up DB...".format(user_input.lower()))
+        client.setup()
+    else:
+        logger.info("Answer is '{0}', exiting...".format(user_input.lower()))
+
 def main(argv: list[str] | None = None):
     args = _build_parser().parse_args(argv)
     # Imported lazily so that `--help` works without DB/API configuration
+    from dotenv import load_dotenv
+    from markethistorydb.client import Client
+    from markethistorydb.utils  import start_logger
+    load_dotenv()
+    start_logger()
+    client = Client()
     if args.command == "fetch":
-        from markethistorydb.fetch.main import main as fetch_main
-        fetch_main(args.time_frame, args.symbol_status, args.exchange)
+        _fetch(client, args)
     elif args.command == "setup":
-        from markethistorydb.setup.main import main as setup_main
-        setup_main()
+        _setup(client)
 
 if __name__ == "__main__":
     main()
