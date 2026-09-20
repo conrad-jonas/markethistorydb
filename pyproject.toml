@@ -1,0 +1,36 @@
+[project]
+name = "markethistorydb"
+version = "0.1.0"
+description = "Creates and manages database for historical exchange market data"
+readme = "README.md"
+requires-python = ">=3.12.9"
+dependencies = [
+    "pandas>=3.0.5",
+    "psycopg[binary]>=3.3.5",
+    "pynput>=1.8.2",
+    "python-dotenv>=1.2.3",
+    "questdb>=5.0.0",
+    "requests>=2.34.2",
+]
+
+[project.scripts]
+markethistorydb = "markethistorydb.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.7",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "db: tests that need the database",
+    "download: tests that download data",
+    "api: tests that call the eodhd.com API",
+    "now: tests currently under development",
+]
+
+[build-system]
+requires = ["uv_build>=0.12.15,<0.13.0"]
+build-backend = "uv_build"

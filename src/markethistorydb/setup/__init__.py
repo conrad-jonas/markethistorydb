@@ -1,0 +1,2 @@
+
+from markethistorydb.setup.main import setup
