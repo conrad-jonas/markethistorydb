@@ -7,6 +7,7 @@ import pandas as pd
 from markethistorydb.db                       import tables
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
 from markethistorydb.fetch.eodhd.request_data import RequestData
+from markethistorydb.fetch.eodhd.url          import Url
 from markethistorydb.utils         import TimeFrame
 
 
@@ -37,12 +38,12 @@ class RequestExchangeData(RequestData):
 
     @staticmethod
     def _get_url_for_exchanges_data() -> str:
-        return RequestData.Url.EXCHANGES_LIST
+        return Url.Address.EXCHANGES_LIST
 
     def _get_url_params_for_exchanges_data(self) -> dict[str, str]:
         return {
-            RequestData.Params.API_TOKEN: self._api_token,
-            RequestData.Params.FMT: RequestData.Values.JSON,
+            Url.Param.API_TOKEN: self._api_token,
+            Url.Param.FMT: Url.Value.JSON,
         }
 
     def _check_exchange_data(self, df_exchanges: pd.DataFrame):
