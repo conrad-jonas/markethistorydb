@@ -8,6 +8,7 @@ from markethistorydb.db                       import tables
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
 from markethistorydb.fetch.eodhd.exchange_codes import ExchangeCodes
 from markethistorydb.fetch.eodhd.request_data import RequestData
+from markethistorydb.fetch.eodhd.url          import Url
 from markethistorydb.utils         import TimeFrame, SymbolStatus
 
 
@@ -24,15 +25,15 @@ class RequestSymbolData(RequestData):
         self._symbol_status: SymbolStatus = symbol_status
 
     def _get_url_for_symbol_data(self, exchange_url_code: str) -> str:
-        return RequestData.Url.exchange_symbol_list(exchange_url_code)
+        return Url.Address.exchange_symbol_list(exchange_url_code)
 
     def _get_url_params_for_symbol_data(self) -> dict[str, str]:
         url_params = {
-            RequestData.Params.API_TOKEN: self._api_token,
-            RequestData.Params.FMT: RequestData.Values.JSON,
+            Url.Param.API_TOKEN: self._api_token,
+            Url.Param.FMT: Url.Value.JSON,
         }
         if self._symbol_status != SymbolStatus.ACTIVE:
-            url_params[RequestData.Params.DELISTED] = RequestData.Values.DELISTED
+            url_params[Url.Param.DELISTED] = Url.Value.DELISTED
         return url_params
 
     # Maps eodhd.com API column names to their DB column name equivalent

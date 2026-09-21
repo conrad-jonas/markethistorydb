@@ -7,4 +7,5 @@ from markethistorydb.fetch.eodhd.request_exchange_data    import RequestExchange
 from markethistorydb.fetch.eodhd.request_fundamental_data import RequestFundamentalData
 from markethistorydb.fetch.eodhd.request_price_data       import RequestPriceData
 from markethistorydb.fetch.eodhd.request_symbol_data      import RequestSymbolData
+from markethistorydb.fetch.eodhd.url                      import Url
 

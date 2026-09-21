@@ -9,6 +9,7 @@ from markethistorydb.db                       import tables
 from markethistorydb.fetch.utils              import FundamentalType, convert_df_column_names_from_camel_to_snake_case
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
 from markethistorydb.fetch.eodhd.request_data import RequestData
+from markethistorydb.fetch.eodhd.url          import Url
 from markethistorydb.utils         import TimeFrame
 
 class RequestFundamentalData(RequestData):
@@ -19,16 +20,16 @@ class RequestFundamentalData(RequestData):
         self._exchange_url_code: str = series_symbol["exchange_url_code"]
 
     def _get_url_for_fundamental_data(self) -> str:
-        return RequestData.Url.fundamentals(self._symbol_code, self._exchange_url_code)
+        return Url.Address.fundamentals(self._symbol_code, self._exchange_url_code)
 
     def _get_url_params_for_fundamental_data(self) -> dict[str, str]:
         filter_value = ("General::Sector,General::Industry,General::GicSector,General::GicGroup,General::GicIndustry,"
                         "General::GicSubIndustry,Earnings::History,Earnings::Annual,Financials::Balance_Sheet,"
                         "Financials::Cash_Flow,Financials::Income_Statement")
         url_params = {
-            RequestData.Params.API_TOKEN: self._api_token,
-            RequestData.Params.FMT: RequestData.Values.JSON,
-            RequestData.Params.FILTER: filter_value,
+            Url.Param.API_TOKEN: self._api_token,
+            Url.Param.FMT: Url.Value.JSON,
+            Url.Param.FILTER: filter_value,
         }
         return url_params
 

@@ -8,6 +8,7 @@ import pandas as pd
 from markethistorydb.db                       import tables
 from markethistorydb.fetch.eodhd.errors       import CompatibilityError
 from markethistorydb.fetch.eodhd.request_data import RequestData
+from markethistorydb.fetch.eodhd.url          import Url
 from markethistorydb.utils         import TimeFrame
 
 class RequestPriceData(RequestData):
@@ -20,25 +21,25 @@ class RequestPriceData(RequestData):
 
     def _get_url_for_price_data(self) -> str:
         if self._time_frame == TimeFrame.DAILY:
-            url_price = RequestData.Url.eod(self._symbol_code, self._exchange_url_code)
+            url_price = Url.Address.eod(self._symbol_code, self._exchange_url_code)
         else:
-            url_price = RequestData.Url.intraday(self._symbol_code, self._exchange_url_code)
+            url_price = Url.Address.intraday(self._symbol_code, self._exchange_url_code)
         return url_price
 
     def _get_url_params_for_price_data(self, start_datetime: datetime | None, end_datetime: datetime | None) -> dict[str, str]:
         url_params = {
-            RequestData.Params.API_TOKEN: self._api_token,
-            RequestData.Params.FMT: RequestData.Values.JSON,
+            Url.Param.API_TOKEN: self._api_token,
+            Url.Param.FMT: Url.Value.JSON,
         }
         if self._time_frame == TimeFrame.DAILY:
             if start_datetime:
-                url_params[RequestData.Params.FROM] = start_datetime.strftime("%Y-%m-%d")
+                url_params[Url.Param.FROM] = start_datetime.strftime("%Y-%m-%d")
         else:
             if not start_datetime or not end_datetime:
                 raise ValueError
-            url_params[RequestData.Params.FROM] = str(int(start_datetime.timestamp()))
-            url_params[RequestData.Params.TO] = str(int(end_datetime.timestamp()))
-            url_params[RequestData.Params.INTERVAL] = RequestData.Values.INTERVAL_1M
+            url_params[Url.Param.FROM] = str(int(start_datetime.timestamp()))
+            url_params[Url.Param.TO] = str(int(end_datetime.timestamp()))
+            url_params[Url.Param.INTERVAL] = Url.Value.INTERVAL_1M
         return url_params
 
     # Raw column names as returned by the eodhd.com API, before renaming to match the DB schema

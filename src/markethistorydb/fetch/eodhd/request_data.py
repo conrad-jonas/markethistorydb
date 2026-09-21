@@ -29,40 +29,6 @@ _WAIT_TIME_IN_SECS_AFTER_API_ERROR = 3600
 
 class RequestData(object):
 
-    class Url:
-        BASE = "https://eodhd.com/api"
-        EXCHANGES_LIST = f"{BASE}/exchanges-list/?"
-
-        @staticmethod
-        def exchange_symbol_list(exchange_url_code: str) -> str:
-            return f"{RequestData.Url.BASE}/exchange-symbol-list/{exchange_url_code}?"
-
-        @staticmethod
-        def eod(symbol_code: str, exchange_url_code: str) -> str:
-            return f"{RequestData.Url.BASE}/eod/{symbol_code}.{exchange_url_code}?"
-
-        @staticmethod
-        def intraday(symbol_code: str, exchange_url_code: str) -> str:
-            return f"{RequestData.Url.BASE}/intraday/{symbol_code}.{exchange_url_code}?"
-
-        @staticmethod
-        def fundamentals(symbol_code: str, exchange_url_code: str) -> str:
-            return f"{RequestData.Url.BASE}/fundamentals/{symbol_code}.{exchange_url_code}?"
-
-    class Params:
-        API_TOKEN = "api_token"
-        FMT = "fmt"
-        FROM = "from"
-        TO = "to"
-        INTERVAL = "interval"
-        DELISTED = "delisted"
-        FILTER = "filter"
-
-    class Values:
-        JSON = "json"
-        DELISTED = "1"
-        INTERVAL_1M = "1m"
-
     @staticmethod
     def _catch_request_error(func: Callable) -> Callable:
         """Decorator to catch error during download of eodhd.com data"""
