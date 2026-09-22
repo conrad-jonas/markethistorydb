@@ -25,9 +25,7 @@ class Update:
             series_exchange[tables.Exchange.Columns.COUNTRY_ISO_3],
             series_exchange[tables.Exchange.Columns.EXCHANGE_CODE]
         ]
-        rows = self._query.execute(query, params)
-        # One combination of arguments in table expected
-        assert len(rows) == 0
+        self._query.execute(query, params)
 
     def symbol(self, series_symbol: pd.Series):
         query = sql.SQL(statements.Symbol.UPDATE_SYMBOL)
@@ -41,9 +39,7 @@ class Update:
             series_symbol[tables.Symbol.Columns.TIME_FRAME],
             series_symbol[tables.Symbol.Columns.SYMBOL_STATUS]
         ]
-        rows = self._query.execute(query, params)
-        # One combination of arguments in table expected
-        assert len(rows) == 0
+        self._query.execute(query, params)
 
     def sector(self, series_symbol: pd.Series):
         query = sql.SQL(statements.Symbol.UPDATE_SECTOR)
@@ -57,6 +53,4 @@ class Update:
             series_symbol[tables.Sector.Columns.SYMBOL_CODE],
             series_symbol[tables.Sector.Columns.EXCHANGE_CODE],
         ]
-        rows = self._query.execute(query, params)
-        # One combination of arguments in table expected
-        assert len(rows) == 0
+        self._query.execute(query, params)

@@ -5,7 +5,7 @@
 import pandas as pd
 
 from markethistorydb.db                       import tables
-from markethistorydb.fetch.eodhd.errors       import CompatibilityError
+from markethistorydb.errors                    import CompatibilityError
 from markethistorydb.fetch.eodhd.exchange_codes import ExchangeCodes
 from markethistorydb.fetch.eodhd.request_data import RequestData
 from markethistorydb.fetch.eodhd.url          import Url

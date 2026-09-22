@@ -15,8 +15,16 @@ class Delete:
 
     def _execute_statements(self, statement_templates: tuple[str, ...], format_kwargs: dict,
                             symbol_code: str, exchange_code: str):
-        """Executes each statement in *statement_templates* sequentially, since QuestDB expects one
-        statement per query. Only statements containing %s placeholders receive symbol/exchange params."""
+        """
+        Executes each statement in *statement_templates* sequentially, since QuestDB expects one
+        statement per query.
+
+        :param statement_templates: Statement templates to run, in order
+        :param format_kwargs: Identifiers substituted into every template
+        :param symbol_code: Symbol to delete; only passed to statements containing %s placeholders
+        :param exchange_code: Exchange of the symbol; passed alongside *symbol_code*
+        :raises QueryError: If one of the statements failed, leaving the earlier ones applied
+        """
         for statement_template in statement_templates:
             query = sql.SQL(statement_template).format(**format_kwargs)
             params = [symbol_code, exchange_code] if "%s" in statement_template else []

@@ -12,8 +12,8 @@ import pandas as pd
 import requests
 import time
 
-from markethistorydb.fetch.errors        import RequestError
-from markethistorydb.fetch.eodhd.errors  import ApiError, BadGatewayError, UnauthorizedError, ApiErrorCode
+from markethistorydb.errors              import (ApiError, ApiErrorCode, BadGatewayError, RequestError,
+                                           UnauthorizedError)
 from markethistorydb.fetch.utils         import FundamentalType
 
 logger = logging.getLogger(__name__)
@@ -42,10 +42,6 @@ class RequestData(object):
                 try:
                     return_value = func(*args, **kwargs)
                     break
-                except ApiError:
-                    logger.error("Exception ApiError occurred, wait 60 minutes till next try", exc_info=True)
-                    num_retries += 1
-                    time.sleep(_WAIT_TIME_IN_SECS_AFTER_API_ERROR)
                 except UnauthorizedError:
                     logger.error("Exception UnauthorizedError occurred")
                     num_retries += 1
@@ -54,6 +50,10 @@ class RequestData(object):
                     logger.error("Exception BadGatewayError occurred")
                     num_retries += 1
                     time.sleep(_WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR)
+                except ApiError:
+                    logger.error("Exception ApiError occurred, wait 60 minutes till next try", exc_info=True)
+                    num_retries += 1
+                    time.sleep(_WAIT_TIME_IN_SECS_AFTER_API_ERROR)
                 except requests.exceptions.Timeout:
                     logger.error("Exception Timeout occurred")
                     num_retries += 1

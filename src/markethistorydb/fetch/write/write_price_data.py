@@ -7,7 +7,7 @@ from questdb.ingress import IngressError
 import pandas as pd
 
 from markethistorydb.db                import Database, tables
-from markethistorydb.fetch.errors      import InsertError
+from markethistorydb.errors            import InsertError
 from markethistorydb.utils  import TimeFrame, SymbolStatus
 
 

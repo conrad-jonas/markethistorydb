@@ -8,7 +8,7 @@ import shutil
 
 from markethistorydb.db                import Database
 from markethistorydb.fetch.download import DownloadExchangeData, DownloadFundamentalData, DownloadPriceData, DownloadSymbolData
-from markethistorydb.fetch.errors   import StorageError, UserInterruptError
+from markethistorydb.errors         import StorageError, UserInterruptError
 from markethistorydb.utils          import TimeFrame, SymbolStatus
 
 logger = logging.getLogger(__name__)

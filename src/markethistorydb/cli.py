@@ -50,7 +50,7 @@ def _start_f4_listener() -> Callable[[], bool]:
 
 def _fetch(client, args: argparse.Namespace):
     """Runs fetch and maps errors to process exit codes"""
-    from markethistorydb.fetch import ErrorCode, StorageError, UserInterruptError, RequestError, InsertError
+    from markethistorydb.errors import ErrorCode, StorageError, UserInterruptError, RequestError, InsertError
     try:
         client.fetch(args.time_frame, args.symbol_status, args.exchange, should_stop=_start_f4_listener())
     except StorageError:
@@ -64,7 +64,7 @@ def _fetch(client, args: argparse.Namespace):
         sys.exit(ErrorCode.REQUEST_ERROR)
     except InsertError:
         logger.error("InsertError", exc_info=True)
-        sys.exit(ErrorCode.QUESTDB_INGRESS_ERROR)
+        sys.exit(ErrorCode.INSERT_ERROR)
 
 def _setup(client):
     """Asks for confirmation, then sets up QuestDB"""
