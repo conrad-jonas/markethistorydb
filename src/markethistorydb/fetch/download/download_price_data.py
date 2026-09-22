@@ -1,4 +1,5 @@
 
+from collections.abc import Callable
 from datetime import datetime, timedelta
 import logging
 import pandas as pd
@@ -17,10 +18,12 @@ _NUM_OF_DAYS_PER_MINUTE_DATA_REQUEST = 120
 
 
 class DownloadPriceData(object):
-    def __init__(self, db: Database, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus):
+    def __init__(self, db: Database, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus,
+                 should_stop: Callable[[], bool] | None = None):
         self._api_token:            str       = api_token
         self.time_frame:            TimeFrame = time_frame
         self.symbol_status:      SymbolStatus = symbol_status
+        self._should_stop: Callable[[], bool] | None = should_stop
 
         self.writePriceData = WritePriceData(db, time_frame, symbol_status)
 
@@ -37,16 +40,28 @@ class DownloadPriceData(object):
 
     def _get_daily_price_data(self, series_symbol: pd.Series,
                               start_datetime: datetime | None = None) -> pd.DataFrame:
-        """Requests and returns daily price data from eodhd.com"""
-        price_data_requester = RequestPriceData(self._api_token, self.time_frame, series_symbol)
+        """
+        Requests daily price data from eodhd.com.
+
+        :param series_symbol: Symbol the data is requested for
+        :param start_datetime: First day to request (the provider's earliest if unset)
+        :return: Daily price records
+        :raises FetchError: If the request failed or the payload has an unexpected structure
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
+        """
+        price_data_requester = RequestPriceData(self._api_token, self.time_frame, series_symbol,
+                                               self._should_stop)
         return price_data_requester.get(start_datetime)
 
     @staticmethod
     def _get_time_periods_for_minute_data_requests(
             start_datetime: datetime | None = None) -> list[tuple[datetime, datetime]]:
         """
-        Returns list of time periods (start and end datetime) for every minute data request from eodhd.com
-        (minute data request are only allowed for a maximum of 120 days)
+        Splits the whole time period into the chunks a minute data request is allowed to cover
+        (minute data requests are only allowed for a maximum of 120 days).
+
+        :param start_datetime: Start of the whole time period (_START_DATE_MINUTE_DATA if unset)
+        :return: Start and end datetime of every request, in chronological order
         """
         # Contains the start and end datetime for each minute data request
         minute_data_time_periods: list[tuple[datetime, datetime]] = []
@@ -72,15 +87,21 @@ class DownloadPriceData(object):
         """
         Requests minute price data from eodhd.com by dividing the whole time period, for which the minute price data
         shall be obtained, into smaller time periods (because minute price data from eodhd.com can only be requested for
-        max 120 days), requests the data for these smaller time periods and returns the whole merged data for the whole
-        time period
+        max 120 days) and requesting the data for these smaller time periods.
+
+        :param series_symbol: Symbol the data is requested for
+        :param start_datetime: Start of the whole time period (_START_DATE_MINUTE_DATA if unset)
+        :return: Merged minute price records for the whole time period
+        :raises FetchError: If one of the requests failed or a payload has an unexpected structure
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
         """
         # Contains the start and end datetime for each minute data request
         minute_data_time_periods: list[tuple[datetime, datetime]] = (
             self._get_time_periods_for_minute_data_requests(start_datetime))
 
         dfs_symbol_for_all_time_periods: list[pd.DataFrame] = []
-        price_data_requester = RequestPriceData(self._api_token, self.time_frame, series_symbol)
+        price_data_requester = RequestPriceData(self._api_token, self.time_frame, series_symbol,
+                                               self._should_stop)
         for start_time_period, end_time_period in minute_data_time_periods:
             dfs_symbol_for_all_time_periods.append(price_data_requester.get(start_time_period, end_time_period))
         df_symbol: pd.DataFrame = pd.concat(dfs_symbol_for_all_time_periods)
@@ -95,8 +116,14 @@ class DownloadPriceData(object):
 
     def run(self, series_symbol: pd.Series) -> bool:
         """
-        Requests price data from eodhd.com and inserts it into QuestDB
+        Requests price data from eodhd.com and inserts it into QuestDB.
+
+        :param series_symbol: Symbol the data is requested for
         :return: True if successful else False
+        :raises FetchError: If a request failed or a payload has an unexpected structure
+        :raises QueryError: If reading the symbol's newest record failed
+        :raises InsertError: If the ingress write still fails once the retries are used up
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
         """
         # Gets start datetime from which data will be downloaded
         start_datetime = self._get_start_datetime(series_symbol)

@@ -1,11 +1,10 @@
+from typing import Callable
 import functools
-import logging
-import time
-from typing import Callable, Any
 
 from questdb.ingress import IngressError
 
-logger = logging.getLogger(__name__)
+from markethistorydb.errors      import InsertError
+from markethistorydb.utils       import call_with_backoff
 
 # Time to wait after connection error to host occurred
 _WAIT_TIME_IN_SECS_AFTER_DB_ERROR = 10
@@ -13,26 +12,21 @@ _WAIT_TIME_IN_SECS_AFTER_DB_ERROR = 10
 _MAX_RETRIES_AFTER_DB_CONNECT_ERROR = 3
 
 
-def catch_ingress_error(func: Callable) -> Callable:
-    """Decorator to catch error during db interaction"""
+def catch_ingress_error[**P, T](func: Callable[P, T]) -> Callable[P, T]:
+    """
+    Decorator that retries *func* while QuestDB's ingress fails, then gives up as InsertError.
+
+    :param func: Decorated function performing the ingress write
+    :return: Wrapped *func* that retries on IngressError
+    """
     @functools.wraps(func)
-    def wrapper_catch_insert_in_questdb_error(*args, **kwargs) -> Any:
-        """Wrapper function"""
-        num_retries = 0
-        error = None
-        while num_retries < _MAX_RETRIES_AFTER_DB_CONNECT_ERROR:
-            # Retries calling function when certain errors caught
-            try:
-                return_value = func(*args, **kwargs)
-                break
-            except IngressError as e:
-                error = e
-                logger.error("IngressError occurred")
-                num_retries += 1
-                time.sleep(_WAIT_TIME_IN_SECS_AFTER_DB_ERROR)
-        else:
-            logger.error("Max number of retries of calling function {0} exceeded".format(func))
-            logger.error(type(error).__name__, exc_info=True)
-            raise IngressError
-        return return_value
-    return wrapper_catch_insert_in_questdb_error
+    def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+        return call_with_backoff(
+            functools.partial(func, *args, **kwargs),
+            retry_on=(IngressError,),
+            give_up_error=InsertError,
+            attempts=_MAX_RETRIES_AFTER_DB_CONNECT_ERROR,
+            base_delay_in_secs=_WAIT_TIME_IN_SECS_AFTER_DB_ERROR,
+            description=func.__qualname__,
+        )
+    return wrapper

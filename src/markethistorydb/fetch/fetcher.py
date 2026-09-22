@@ -32,10 +32,14 @@ class Fetcher(object):
         # Metric on how many symbols data has been downloaded for
         self.num_of_requested_symbols   = 0
         # Download handlers
-        self._downloadExchangeData      = DownloadExchangeData(db, api_token, self.time_frame, self.target_exchange_name)
-        self._downloadSymbolData        = DownloadSymbolData(db, api_token, self.time_frame, self.symbol_status)
-        self._downloadPriceData         = DownloadPriceData(db, api_token, self.time_frame, self.symbol_status)
-        self._downloadFundamentalData   = DownloadFundamentalData(db, api_token, self.time_frame, self.symbol_status)
+        self._downloadExchangeData      = DownloadExchangeData(db, api_token, self.time_frame, self.target_exchange_name,
+                                                               self._should_stop)
+        self._downloadSymbolData        = DownloadSymbolData(db, api_token, self.time_frame, self.symbol_status,
+                                                             self._should_stop)
+        self._downloadPriceData         = DownloadPriceData(db, api_token, self.time_frame, self.symbol_status,
+                                                            self._should_stop)
+        self._downloadFundamentalData   = DownloadFundamentalData(db, api_token, self.time_frame, self.symbol_status,
+                                                                  self._should_stop)
 
     def _check_user_interrupt(self):
         if self._should_stop():

@@ -2,7 +2,6 @@
 
 """Provides write interface to db"""
 
-from psycopg         import IntegrityError
 from questdb.ingress import Sender, ServerTimestamp
 import logging
 import pandas as pd
@@ -16,54 +15,42 @@ logger = logging.getLogger(__name__)
 
 
 class Insert:
+    """
+    Writes over QuestDB's ILP interface, which acknowledges a batch but enforces no
+    constraints: a duplicate is appended, not rejected. Callers that must not duplicate
+    (the Write* classes) read first and update instead - see fetch/write.
+    """
+
     def __init__(self, config: Config):
         self._config = config
 
     @catch_ingress_error
     def table(self, df: pd.DataFrame, table_name: str, timestamp_column: str | None = None):
-        """Inserts *df* into *table_name*.
+        """
+        Inserts *df* into *table_name*.
 
+        :param df: Records to write, one row per record
+        :param table_name: Name of the target table
         :param timestamp_column: Name of the df column holding the designated timestamp. If the
             table's designated timestamp is generated server-side (e.g. created_at columns not
             present in df), leave unset so QuestDB assigns it.
+        :raises InsertError: If the ingress write still fails once the retries are used up
         """
         at = timestamp_column if timestamp_column is not None else ServerTimestamp
         with Sender.from_conf(self._config.http_conf) as sender:
             sender.dataframe(df, table_name=table_name, at=at)
 
     def exchange(self, series_exchange: pd.Series):
-        try:
-            df_exchange = series_exchange.to_frame().T
-            self.table(df_exchange, tables.Exchange.NAME)
-        except IntegrityError as error:
-            logger.error("""Exchange code {0} already exists in table {1}""".format(
-                series_exchange[tables.Exchange.Columns.EXCHANGE_CODE],
-                tables.Exchange.NAME))
-            raise error
+        df_exchange = series_exchange.to_frame().T
+        self.table(df_exchange, tables.Exchange.NAME)
 
     def symbol(self, series_symbol: pd.Series):
-        try:
-            df_symbol = series_symbol.to_frame().T
-            self.table(df_symbol, tables.Symbol.NAME)
-        except IntegrityError as error:
-            logger.error("""Symbol code {0} ({1}, {2}, {3}) combo already exists in table {4}""".format(
-                series_symbol[tables.Symbol.Columns.SYMBOL_CODE],
-                series_symbol[tables.Symbol.Columns.EXCHANGE_CODE],
-                series_symbol[tables.Symbol.Columns.TIME_FRAME],
-                series_symbol[tables.Symbol.Columns.SYMBOL_STATUS],
-                tables.Symbol.NAME))
-            raise error
+        df_symbol = series_symbol.to_frame().T
+        self.table(df_symbol, tables.Symbol.NAME)
 
     def sector(self, series_sector: pd.Series):
-        try:
-            df_sector = series_sector.to_frame().T
-            self.table(df_sector, tables.Sector.NAME)
-        except IntegrityError as error:
-            logger.error("""Symbol and exchange code combo {0} and {1} already exists in table {2}""".format(
-                series_sector[tables.Sector.Columns.SYMBOL_CODE],
-                series_sector[tables.Sector.Columns.EXCHANGE_CODE],
-                tables.Sector.NAME))
-            raise error
+        df_sector = series_sector.to_frame().T
+        self.table(df_sector, tables.Sector.NAME)
 
     def ohlcv(self, df: pd.DataFrame, symbol_code: str, exchange_code: str, time_frame: TimeFrame,
               symbol_status: SymbolStatus):
