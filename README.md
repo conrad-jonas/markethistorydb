@@ -94,6 +94,8 @@ fault is clearly not with the symbols.
 - Deploy via CI pipeline to github.com
 - Make project ready for library usage
 - Add read functionality to CLI usage (next to setup and fetch)
+- Update the four stale test modules (they import the pre-refactor layout and are skipped
+  via `collect_ignore` in `tests/conftest.py`)
 - Storage error should trigger if machine on which DB (not the client) runs into limited storage space
 - use ruff, pydantic and mypy in the CI workflow
 - Move more constants into configuration
