@@ -36,6 +36,9 @@ class DownloadSymbolData(object):
             if not df_exchange_symbols.empty:
                 df_exchange_symbols["exchange_url_code"] = exchange_url_code
                 dfs_exchange_symbols.append(df_exchange_symbols)
+        if not dfs_exchange_symbols:
+            logger.warning("No symbols returned for any of the requested exchanges")
+            return pd.DataFrame()
         df_symbols = pd.concat(dfs_exchange_symbols)
         return df_symbols
 

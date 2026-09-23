@@ -2,8 +2,18 @@
 
 """Enums and helper functions"""
 
+from dataclasses import dataclass
 from enum import Enum
 import pandas as pd
+
+
+@dataclass(frozen=True)
+class FailedSymbol:
+    """A symbol whose download failed, and what kind of error caused it"""
+
+    symbol_code:      str
+    exchange_code:    str
+    error_type_name:  str
 
 
 class FundamentalType(Enum):
@@ -20,6 +30,11 @@ class FundamentalType(Enum):
 
 
 def convert_df_column_names_from_camel_to_snake_case(df: pd.DataFrame) -> pd.DataFrame:
-    """Converts column names of dataframe from camel case to snake case"""
+    """
+    Converts column names of dataframe from camel case to snake case.
+
+    :param df: Dataframe whose columns are renamed in place
+    :return: The same dataframe, with renamed columns
+    """
     df.columns = (df.columns.str.replace('(?<=[a-z])(?=[A-Z])', '_', regex=True).str.lower())
     return df
