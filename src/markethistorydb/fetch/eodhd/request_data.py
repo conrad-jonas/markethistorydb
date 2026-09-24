@@ -12,10 +12,10 @@ import pandas as pd
 import requests
 
 from markethistorydb.errors import (AccessRightsError, ApiError, ApiErrorCode, BadGatewayError,
-                                    CompatibilityError, DataLimitError, RateLimitError,
-                                    RequestError, UnauthorizedError)
+                                    CompatibilityError, DataLimitError, NetworkError,
+                                    RateLimitError, RequestError, UnauthorizedError)
 from markethistorydb.fetch.utils  import FundamentalType
-from markethistorydb.utils        import TimeFrame, call_with_backoff
+from markethistorydb.utils        import TimeFrame, call_with_backoff, redact_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,7 @@ _MAX_ERROR_DETAIL_LENGTH = 500
 _RETRYABLE_ERRORS = (
     RateLimitError,
     BadGatewayError,
-    requests.exceptions.Timeout,
-    requests.exceptions.ConnectionError,
+    NetworkError,
 )
 
 
@@ -121,11 +120,22 @@ class RequestData(object):
         :param url: URL to request
         :param params: Query parameters, API token included
         :return: Parsed JSON body, or None if the provider knows no such ticker
+        :raises NetworkError: If the provider could not be reached or did not answer in time
+        :raises RequestError: If the request failed in a way no retry can fix, e.g. an invalid URL
         :raises ApiError: If the provider answered with an error status; the subclass says which
         :raises CompatibilityError: If the body is not JSON
         """
-        response = requests.get(url, params=params,
-                                timeout=(_CONNECT_TIMEOUT_IN_SECS, _READ_TIMEOUT_IN_SECS))
+        # A requests exception's message holds the full URL, API token included. Re-raised with
+        # the token masked, and not chained, since a chained one prints with every traceback.
+        try:
+            response = requests.get(url, params=params,
+                                    timeout=(_CONNECT_TIMEOUT_IN_SECS, _READ_TIMEOUT_IN_SECS))
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as error:
+            raise NetworkError("{0}: {1}".format(
+                type(error).__name__, redact_api_token(str(error)))) from None
+        except requests.exceptions.RequestException as error:
+            raise RequestError("{0}: {1}".format(
+                type(error).__name__, redact_api_token(str(error)))) from None
         if response.status_code == ApiErrorCode.TICKER_NOT_FOUND:
             # No data for this ticker; the callers treat None as "nothing to store"
             return None
@@ -145,7 +155,8 @@ class RequestData(object):
         :param url: URL to request
         :param params: Query parameters, API token included
         :return: Parsed JSON body, or None if the provider knows no such ticker
-        :raises RequestError: If the request still fails once the retries are used up
+        :raises RequestError: If the request still fails once the retries are used up, or failed
+            in a way no retry can fix; the message never holds the API token
         :raises UnauthorizedError: If the provider rejected the token; never retried
         :raises DataLimitError: If the plan's data limit has been reached; never retried
         :raises AccessRightsError: If the plan does not cover the endpoint; never retried

@@ -94,7 +94,18 @@ class FetchError(MarketHistoryDbError):
     """Parent class of every error raised while fetching data from the provider"""
 
 class RequestError(FetchError):
-    """Exception raised when a request failed finally, i.e. after all retries"""
+    """
+    Exception raised when a request failed finally, i.e. after all retries, or failed in a way
+    no retry can fix
+    """
+
+class NetworkError(FetchError):
+    """
+    Exception raised when the provider could not be reached or did not answer in time.
+
+    Stands in for the requests exception, whose message holds the full URL, API token included;
+    the message of this one has the token masked.
+    """
 
 class CompatibilityError(FetchError):
     """Exception raised for unexpected data structure"""

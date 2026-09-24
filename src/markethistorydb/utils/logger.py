@@ -8,8 +8,9 @@ calls start_logger().
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 import logging
-import re
 import sys
+
+from markethistorydb.utils.redact import redact_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -21,26 +22,26 @@ LOG_FILE_NAME = "markethistorydb.log"
 # Size at which the log file gets rotated, and how many rotations are kept
 _MAX_LOG_FILE_SIZE_IN_BYTES = 10 * 2**20
 _NUM_OF_LOG_FILE_BACKUPS = 5
-# Matches the value of the eodhd.com API token, both in a query string (api_token=...) and in a
-# dict repr ('api_token': '...'). requests puts the full URL, token included, into the message
-# of e.g. a ConnectionError, so the token can surface in any log line or traceback.
-_API_TOKEN_PATTERN = re.compile(r"""(api_token['"]?\s*[=:]\s*['"]?)[^&\s'",)}]+""")
-_REDACTED = "***"
 
 
 class _RedactingFormatter(logging.Formatter):
-    """Formatter that masks the API token in the fully formatted record, traceback included"""
+    """
+    Formatter that masks the API token in the fully formatted record, traceback included.
+
+    The request layer already strips the token from the errors it raises; this is the second
+    line of defence for anything else that might carry it into a log line.
+    """
 
     def format(self, record: logging.LogRecord) -> str:
         """
         Formats *record*, then masks every API token in the result.
 
         :param record: Record to format
-        :return: Formatted record with the API token replaced by _REDACTED
+        :return: Formatted record with the API token replaced by REDACTED
         """
         # Redacting the finished string rather than record.msg also covers the args, the
         # traceback and the stack info, which are only added during formatting
-        return _API_TOKEN_PATTERN.sub(r"\g<1>" + _REDACTED, super().format(record))
+        return redact_api_token(super().format(record))
 
 
 def _build_formatter() -> logging.Formatter:

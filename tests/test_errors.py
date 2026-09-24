@@ -2,12 +2,17 @@
 """Tests for the error paths: status mapping, retries, empty reads and per-symbol isolation"""
 
 from json import JSONDecodeError
+import logging
+import sys
+import traceback
 import pandas as pd
 import pytest
+import requests
 
 import markethistorydb.db.io.query as query_module
 import markethistorydb.fetch.eodhd.request_data as request_data_module
 import markethistorydb.utils.backoff as backoff_module
+import markethistorydb.utils.logger as logger_module
 from markethistorydb import cli
 from markethistorydb.db.io.query import Query
 from markethistorydb.db.io.read  import Read
@@ -15,12 +20,13 @@ from markethistorydb.db.tables   import Symbol
 from markethistorydb.errors import (AccessRightsError, AccountError, ApiError, BadGatewayError,
                                     CompatibilityError, ConfigError, DataLimitError, DbError,
                                     ErrorCode, FetchError, InsertError, MarketHistoryDbError,
-                                    QueryError, RateLimitError, RequestError, StorageError,
-                                    UnauthorizedError, UserInterruptError)
+                                    NetworkError, QueryError, RateLimitError, RequestError,
+                                    StorageError, UnauthorizedError, UserInterruptError)
 from markethistorydb.fetch.eodhd import RequestExchangeData
 from markethistorydb.fetch.fetcher import Fetcher
 from markethistorydb.fetch.utils import FailedSymbol
 from markethistorydb.utils import SymbolStatus, TimeFrame, call_with_backoff
+from markethistorydb.utils.redact import REDACTED
 
 
 class FakeResponse:
@@ -61,13 +67,18 @@ def slept(monkeypatch) -> list[float]:
     return waits
 
 class FakeApi:
-    """Answers the request layer with queued responses, repeating the last one, and counts calls"""
+    """
+    Answers the request layer with queued responses, repeating the last one, and counts calls.
+
+    A queued exception is raised instead of answered, as requests raises a timeout or a refused
+    connection.
+    """
 
     def __init__(self):
-        self.responses: list[FakeResponse] = []
+        self.responses: list[FakeResponse | Exception] = []
         self.calls: list[str] = []
 
-    def respond_with(self, *responses: FakeResponse):
+    def respond_with(self, *responses: FakeResponse | Exception):
         self.responses.extend(responses)
 
     @property
@@ -78,7 +89,10 @@ class FakeApi:
         self.calls.append(url)
         # Timeouts are what keep a hung host from blocking the run, so they must be passed
         assert timeout is not None
-        return self.responses[min(len(self.calls) - 1, len(self.responses) - 1)]
+        response = self.responses[min(len(self.calls) - 1, len(self.responses) - 1)]
+        if isinstance(response, Exception):
+            raise response
+        return response
 
 
 @pytest.fixture
@@ -177,6 +191,26 @@ def test_error_message_does_not_grow_with_the_response_body(api, slept):
     with pytest.raises(UnauthorizedError) as excinfo:
         _request(_requester())
     assert len(excinfo.value.message) <= request_data_module._MAX_ERROR_DETAIL_LENGTH
+
+def test_a_timeout_is_retried_and_the_request_succeeds_once_the_host_answers(api, slept):
+    api.respond_with(requests.exceptions.ReadTimeout("read timed out"))
+    api.respond_with(FakeResponse(200, payload=[{"Code": "US"}]))
+    assert _request(_requester()) == [{"Code": "US"}]
+    assert api.num_of_calls == 2
+
+def test_a_host_that_stays_unreachable_ends_in_a_request_error(api, slept):
+    api.respond_with(requests.exceptions.ConnectionError("connection refused"))
+    with pytest.raises(RequestError) as excinfo:
+        _request(_requester())
+    # The requests exception stays out of the contract; this package's own error takes its place
+    assert isinstance(excinfo.value.__cause__, NetworkError)
+    assert api.num_of_calls == 3
+
+def test_a_request_exception_no_retry_can_fix_is_a_request_error_at_once(api, slept):
+    api.respond_with(requests.exceptions.TooManyRedirects("exceeded 30 redirects"))
+    with pytest.raises(RequestError):
+        _request(_requester())
+    assert api.num_of_calls == 1
 
 
 # --- backoff helper ------------------------------------------------------------------------
@@ -340,6 +374,52 @@ def test_the_password_stays_out_of_the_repr():
     from markethistorydb.config import Config
 
     assert "hunter2" not in repr(Config(eodhd_api_token="token", questdb_password="hunter2"))
+
+
+# --- API token redaction -------------------------------------------------------------------
+
+def _formatted(message: str, *args, exc_info=None) -> str:
+    """
+    Formats one record the way the CLI's log handlers do.
+
+    :param message: Log message, %-style placeholders included
+    :param args: Values for the placeholders in *message*
+    :param exc_info: Exception info attached to the record, as sys.exc_info() returns it
+    :return: The line as it would be written to the terminal and the log file
+    """
+    record = logging.LogRecord("test", logging.ERROR, __file__, 0, message, args, exc_info)
+    return logger_module._build_formatter().format(record)
+
+
+@pytest.mark.parametrize("leak", [
+    "https://eodhd.com/api/eod/AAPL.US?api_token=SECRET&fmt=json",
+    "{'api_token': 'SECRET', 'fmt': 'json'}",
+])
+def test_the_api_token_is_masked_in_the_message_its_args_and_the_traceback(leak):
+    try:
+        raise requests.exceptions.ConnectionError(leak)
+    except requests.exceptions.ConnectionError:
+        line = _formatted("{0} failed, params %s".format(leak), leak, exc_info=sys.exc_info())
+    assert "SECRET" not in line
+    assert REDACTED in line
+
+@pytest.mark.parametrize("request_exception", [
+    requests.exceptions.ConnectionError,
+    requests.exceptions.ReadTimeout,
+    requests.exceptions.TooManyRedirects,
+])
+def test_the_error_raised_for_a_request_exception_does_not_carry_the_api_token(
+        api, slept, request_exception):
+    # requests puts the full URL, token included, into its exceptions' messages. The error has
+    # to be clean itself, not only once the CLI's formatter is done with it, since a caller of
+    # the package may print it any way it likes.
+    api.respond_with(request_exception(
+        "Max retries exceeded with url: /api/exchanges-list/?api_token=SECRET&fmt=json"))
+    with pytest.raises(RequestError) as excinfo:
+        _request(_requester())
+    # format_exception walks the whole chain, the causes and contexts included
+    assert "SECRET" not in "".join(traceback.format_exception(excinfo.value))
+    assert REDACTED in str(excinfo.value)
 
 
 # --- per-symbol isolation ------------------------------------------------------------------
