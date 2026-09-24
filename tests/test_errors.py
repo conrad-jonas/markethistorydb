@@ -160,6 +160,20 @@ def test_rate_limit_falls_back_to_the_backoff_when_retry_after_is_a_date(api, sl
     # Backoff doubles rather than repeating the base delay
     assert slept == [10.0, 20.0]
 
+@pytest.mark.parametrize("retry_after", ["nan", "-5", "inf"])
+def test_a_retry_after_that_is_no_usable_wait_falls_back_to_the_backoff(api, slept, retry_after):
+    # float() accepts all three, but a nan wait never ends and a negative one does not wait at all
+    api.respond_with(FakeResponse(429, text="slow down", headers={"Retry-After": retry_after}))
+    with pytest.raises(RequestError):
+        _request(_requester())
+    assert slept == [10.0, 20.0]
+
+def test_a_retry_after_beyond_the_cap_is_cut_down_to_it(api, slept):
+    api.respond_with(FakeResponse(429, text="slow down", headers={"Retry-After": "86400"}))
+    with pytest.raises(RequestError):
+        _request(_requester())
+    assert slept == [3600.0, 3600.0]
+
 def test_server_error_is_retried_although_its_status_is_not_a_known_one(api, slept):
     api.respond_with(FakeResponse(503, text="unavailable"))
     with pytest.raises(RequestError):

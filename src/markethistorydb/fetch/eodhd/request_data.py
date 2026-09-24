@@ -8,6 +8,7 @@ from json            import JSONDecodeError
 from typing          import Any
 import functools
 import logging
+import math
 import pandas as pd
 import requests
 
@@ -79,10 +80,15 @@ class RequestData(object):
         if retry_after is None:
             return None
         try:
-            return float(retry_after)
+            retry_after_in_secs = float(retry_after)
         except ValueError:
             # The header may hold an HTTP date instead; fall back to the generic backoff
             return None
+        # float() also accepts "nan", "inf" and negative numbers. A nan wait never ends and a
+        # negative one does not wait at all, so fall back to the generic backoff for those too
+        if not math.isfinite(retry_after_in_secs) or retry_after_in_secs < 0:
+            return None
+        return retry_after_in_secs
 
     def _raise_for_status(self, response: requests.Response):
         """
