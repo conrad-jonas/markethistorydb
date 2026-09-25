@@ -4,6 +4,8 @@
 from dataclasses import dataclass, field
 import os
 
+from psycopg.conninfo import make_conninfo
+
 from markethistorydb.errors import ConfigError
 from markethistorydb.utils  import require_env
 
@@ -33,9 +35,22 @@ class Config:
 
         :return: psycopg connection string, connect timeout included
         """
-        return "user={0} password={1} host={2} port={3} dbname={4} connect_timeout={5}".format(
-            self.questdb_user, self.questdb_password, self.questdb_host, self.questdb_pg_port,
-            self.questdb_db_name, _CONNECT_TIMEOUT_IN_SECS)
+        # make_conninfo quotes every value, so a space in the password cannot end it early and
+        # smuggle in settings of its own
+        return make_conninfo(
+            user=self.questdb_user, password=self.questdb_password, host=self.questdb_host,
+            port=self.questdb_pg_port, dbname=self.questdb_db_name,
+            connect_timeout=_CONNECT_TIMEOUT_IN_SECS)
+
+    @staticmethod
+    def _escape_conf_value(value: str | int) -> str:
+        """
+        Escapes *value* for a QuestDB config string, in which ';' ends a value.
+
+        :param value: Value to put into the config string
+        :return: *value* with every ';' doubled, which is how the parser reads a literal ';'
+        """
+        return str(value).replace(";", ";;")
 
     @property
     def http_conf(self) -> str:
@@ -45,7 +60,9 @@ class Config:
         :return: QuestDB ingress connection string
         """
         return "http::addr={0}:{1};username={2};password={3};".format(
-            self.questdb_host, self.questdb_http_port, self.questdb_user, self.questdb_password)
+            *(self._escape_conf_value(value) for value in (
+                self.questdb_host, self.questdb_http_port, self.questdb_user,
+                self.questdb_password)))
 
     @staticmethod
     def _env_as_int(name: str, default: int) -> int:

@@ -8,12 +8,15 @@ import traceback
 import pandas as pd
 import pytest
 import requests
+from psycopg.conninfo import conninfo_to_dict
+from questdb.ingress import Sender
 
 import markethistorydb.db.io.query as query_module
 import markethistorydb.fetch.eodhd.request_data as request_data_module
 import markethistorydb.utils.backoff as backoff_module
 import markethistorydb.utils.logger as logger_module
 from markethistorydb import cli
+from markethistorydb.config import Config
 from markethistorydb.db.io.query import Query
 from markethistorydb.db.io.read  import Read
 from markethistorydb.db.tables   import Symbol
@@ -359,14 +362,10 @@ def test_a_failing_statement_is_reported_as_a_db_error(monkeypatch):
 # --- configuration -------------------------------------------------------------------------
 
 def test_the_db_connection_gives_up_rather_than_hanging_on_an_unreachable_host():
-    from markethistorydb.config import Config
-
     conninfo = Config(eodhd_api_token="token", questdb_password="secret").psycopg_conninfo
     assert "connect_timeout=" in conninfo
 
 def test_a_port_that_is_not_a_number_is_a_config_error(monkeypatch):
-    from markethistorydb.config import Config
-
     monkeypatch.setenv("EODHD_API_TOKEN", "token")
     monkeypatch.setenv("QUESTDB_PASSWORD", "secret")
     monkeypatch.setenv("QUESTDB_PG_PORT", "notaport")
@@ -376,18 +375,40 @@ def test_a_port_that_is_not_a_number_is_a_config_error(monkeypatch):
     assert "QUESTDB_PG_PORT" in str(excinfo.value)
 
 def test_a_missing_token_is_a_config_error_naming_the_variable(monkeypatch):
-    from markethistorydb.config import Config
-
     monkeypatch.delenv("EODHD_API_TOKEN", raising=False)
     monkeypatch.setenv("QUESTDB_PASSWORD", "secret")
     with pytest.raises(ConfigError) as excinfo:
         Config.from_env()
     assert "EODHD_API_TOKEN" in str(excinfo.value)
 
-def test_the_password_stays_out_of_the_repr():
-    from markethistorydb.config import Config
+def test_neither_secret_shows_up_in_the_repr():
+    text = repr(Config(eodhd_api_token="tok-secret", questdb_password="hunter2"))
+    assert "hunter2" not in text
+    assert "tok-secret" not in text
 
-    assert "hunter2" not in repr(Config(eodhd_api_token="token", questdb_password="hunter2"))
+@pytest.mark.parametrize("password", [
+    "pw hostaddr=203.0.113.1",
+    "with space",
+    "it's",
+    "back\\slash",
+])
+def test_the_password_cannot_break_out_of_the_db_connection_string(password):
+    # Unquoted, the space would end the password and let the rest pass as settings of its own
+    conninfo = conninfo_to_dict(
+        Config(eodhd_api_token="token", questdb_password=password).psycopg_conninfo)
+    assert conninfo["password"] == password
+    assert "hostaddr" not in conninfo
+
+@pytest.mark.parametrize("password, escaped", [
+    ("a;b",   "a;;b"),
+    ("a;;b",  "a;;;;b"),
+    ("ends;", "ends;;"),
+])
+def test_a_semicolon_in_the_password_cannot_end_the_ingress_config_early(password, escaped):
+    http_conf = Config(eodhd_api_token="token", questdb_password=password).http_conf
+    assert "password={0};".format(escaped) in http_conf
+    # Has the real parser accept it;
+    Sender.from_conf(http_conf)
 
 
 # --- API token redaction -------------------------------------------------------------------
