@@ -2,6 +2,7 @@
 """Tests for the error paths: status mapping, retries, empty reads and per-symbol isolation"""
 
 from json import JSONDecodeError
+from types import SimpleNamespace
 import logging
 import sys
 import traceback
@@ -13,6 +14,7 @@ from questdb.ingress import Sender
 
 import markethistorydb.db.io.query as query_module
 import markethistorydb.fetch.eodhd.request_data as request_data_module
+import markethistorydb.fetch.fetcher as fetcher_module
 import markethistorydb.utils.backoff as backoff_module
 import markethistorydb.utils.logger as logger_module
 from markethistorydb import cli
@@ -203,11 +205,17 @@ def test_a_retried_request_succeeds_once_the_provider_recovers(api, slept):
     assert _request(_requester()) == [{"Code": "US"}]
     assert api.num_of_calls == 2
 
-def test_error_message_does_not_grow_with_the_response_body(api, slept):
-    api.respond_with(FakeResponse(401, text="x" * 10_000))
-    with pytest.raises(UnauthorizedError) as excinfo:
+@pytest.mark.parametrize("response, error_type", [
+    (FakeResponse(401, text="x" * 10_000),                        UnauthorizedError),
+    (FakeResponse(418, text="x" * 10_000),                        ApiError),
+    (FakeResponse(200, text="<html>{0}</html>".format("x" * 10_000)), CompatibilityError),
+])
+def test_error_message_does_not_grow_with_the_response_body(api, slept, response, error_type):
+    api.respond_with(response)
+    with pytest.raises(error_type) as excinfo:
         _request(_requester())
-    assert len(excinfo.value.message) <= request_data_module._MAX_ERROR_DETAIL_LENGTH
+    # Leaves room for the text to have some wrap around the detail
+    assert len(excinfo.value.message) < 2 * request_data_module._MAX_ERROR_DETAIL_LENGTH
 
 def test_a_timeout_is_retried_and_the_request_succeeds_once_the_host_answers(api, slept):
     api.respond_with(requests.exceptions.ReadTimeout("read timed out"))
@@ -265,6 +273,54 @@ def test_waiting_for_a_retry_is_interruptible(api):
         _request(_requester(should_stop=lambda: True))
     # Aborted during the first wait rather than sitting it out
     assert api.num_of_calls == 1
+
+
+class FakeClock:
+    """Stands in for the time module; sleeping advances the clock instead of blocking"""
+
+    def __init__(self):
+        self.now = 0.0
+        self.naps: list[float] = []
+
+    def monotonic(self) -> float:
+        return self.now
+
+    def sleep(self, secs: float):
+        self.naps.append(secs)
+        self.now += secs
+
+
+@pytest.fixture
+def clock(monkeypatch) -> FakeClock:
+    """
+    Replaces the clock the backoff waits on, so that the real _sleep runs without blocking.
+
+    :param monkeypatch: pytest fixture used to replace backoff's time module
+    :return: The fake clock, recording every sleep
+    """
+    fake_clock = FakeClock()
+    monkeypatch.setattr(backoff_module, "time", fake_clock)
+    return fake_clock
+
+
+def test_a_wait_is_slept_in_short_slices_that_add_up_to_the_delay(clock):
+    polls: list[float] = []
+
+    def never_stop() -> bool:
+        polls.append(clock.now)
+        return False
+
+    backoff_module._sleep(2.2, never_stop)
+    assert all(nap <= backoff_module._SLEEP_SLICE_IN_SECS for nap in clock.naps)
+    assert sum(clock.naps) == pytest.approx(2.2)
+    # Polled before every slice, so an interrupt is noticed within one slice
+    assert len(polls) > len(clock.naps)
+
+def test_a_wait_ends_early_once_should_stop_turns_true(clock):
+    with pytest.raises(UserInterruptError):
+        backoff_module._sleep(3600.0, lambda: clock.now >= 1.0)
+    # Stopped one second into an hour's wait rather than sitting it out
+    assert clock.now == pytest.approx(1.0)
 
 
 # --- DB reads ------------------------------------------------------------------------------
@@ -504,17 +560,18 @@ def test_a_failing_insert_only_costs_its_own_symbol(monkeypatch):
     fetcher._download_all_symbols(_symbols(2))
     assert len(fetcher.failed_symbols) == 1
 
-def test_enough_failures_in_a_row_abort_the_run(monkeypatch):
+@pytest.mark.parametrize("error", [RequestError("gave up"), InsertError("ingress gave up")])
+def test_enough_failures_in_a_row_abort_the_run(monkeypatch, error):
     from markethistorydb.fetch.fetcher import _MAX_CONSECUTIVE_SYMBOL_FAILURES
 
     fetcher = _fetcher(monkeypatch)
     monkeypatch.setattr(fetcher, "_download_historical_data",
-                        lambda series_symbol: (_ for _ in ()).throw(RequestError("gave up")))
+                        lambda series_symbol: (_ for _ in ()).throw(error))
 
     with pytest.raises(FetchError) as excinfo:
         fetcher._download_all_symbols(_symbols(_MAX_CONSECUTIVE_SYMBOL_FAILURES + 5))
     assert "in a row" in str(excinfo.value)
-    assert isinstance(excinfo.value.__cause__, RequestError)
+    assert excinfo.value.__cause__ is error
     # Stopped at the limit instead of working through the rest of the list
     assert len(fetcher.failed_symbols) == _MAX_CONSECUTIVE_SYMBOL_FAILURES
 
@@ -548,6 +605,25 @@ def test_running_out_of_disk_space_ends_the_run(monkeypatch):
 
     with pytest.raises(StorageError):
         fetcher._download_all_symbols(_symbols(3))
+
+def _free_disk_space_in_gb(monkeypatch, free_in_gb: int):
+    """
+    Makes the fetcher see *free_in_gb* of free disk space.
+
+    :param monkeypatch: pytest fixture used to replace the fetcher's shutil
+    :param free_in_gb: Free space disk_usage() reports, in GB
+    """
+    usage = SimpleNamespace(free=free_in_gb * fetcher_module._BYTES_PER_GB)
+    monkeypatch.setattr(fetcher_module, "shutil", SimpleNamespace(disk_usage=lambda path: usage))
+
+def test_less_free_disk_space_than_the_minimum_is_a_storage_error(monkeypatch):
+    _free_disk_space_in_gb(monkeypatch, fetcher_module._MIN_FREE_SPACE_IN_GB - 1)
+    with pytest.raises(StorageError):
+        Fetcher._check_storage_space()
+
+def test_exactly_the_minimum_free_disk_space_is_enough(monkeypatch):
+    _free_disk_space_in_gb(monkeypatch, fetcher_module._MIN_FREE_SPACE_IN_GB)
+    Fetcher._check_storage_space()
 
 @pytest.mark.parametrize("error", [
     DataLimitError("plan used up", 402),
@@ -629,11 +705,61 @@ def cli_client(monkeypatch):
     (FetchError("too many in a row"),    ErrorCode.FETCH_ERROR),
     (InsertError("ingress gave up"),     ErrorCode.INSERT_ERROR),
     (QueryError("select failed"),        ErrorCode.DB_ERROR),
+    (RuntimeError("bug"),                ErrorCode.UNKNOWN_ERROR),
 ])
 def test_cli_maps_each_error_to_its_exit_code(cli_client, error, expected_exit_code):
     if error is not None:
         cli_client.append(error)
     assert cli.main(["fetch"]) == expected_exit_code
+
+def test_a_config_error_while_building_the_client_is_a_config_error_code(monkeypatch, cli_client):
+    # Client() reads the environment, so that is where a missing token actually surfaces
+    class UnconfiguredClient:
+        def __init__(self, config=None):
+            raise ConfigError("Required environment variable 'EODHD_API_TOKEN' is not set")
+
+    monkeypatch.setattr(cli, "Client", UnconfiguredClient)
+    assert cli.main(["fetch"]) == ErrorCode.CONFIG_ERROR
+
+
+class FakeSetupClient:
+    """Counts the setups run on it, rather than dropping any tables"""
+
+    def __init__(self):
+        self.num_of_setups = 0
+
+    def setup(self):
+        self.num_of_setups += 1
+
+
+def _typed(answer: str | BaseException):
+    """
+    Builds a stand-in for input() that answers with *answer*.
+
+    :param answer: Text the user types, or the exception input() raises instead (EOFError for a
+        closed stdin)
+    :return: Function to put in place of builtins.input
+    """
+    def fake_input(prompt: str = "") -> str:
+        if isinstance(answer, BaseException):
+            raise answer
+        return answer
+    return fake_input
+
+
+@pytest.mark.parametrize("answer", ["", "no", "n", "yess", EOFError()])
+def test_setup_drops_nothing_unless_the_user_confirms(monkeypatch, answer):
+    client = FakeSetupClient()
+    monkeypatch.setattr("builtins.input", _typed(answer))
+    cli._setup(client)
+    assert client.num_of_setups == 0
+
+@pytest.mark.parametrize("answer", ["yes", "Y"])
+def test_setup_runs_once_the_user_confirms(monkeypatch, answer):
+    client = FakeSetupClient()
+    monkeypatch.setattr("builtins.input", _typed(answer))
+    cli._setup(client)
+    assert client.num_of_setups == 1
 
 def test_a_subclass_wins_over_the_parent_whatever_the_entries_are_ordered_like():
     # InsertError inherits DbError, and both are mapped; the lookup must not settle for the parent
