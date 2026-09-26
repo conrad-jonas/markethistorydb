@@ -173,7 +173,7 @@ class RequestData(object):
             functools.partial(self._get, url, params),
             retry_on=_RETRYABLE_ERRORS,
             give_up_error=RequestError,
-            attempts=_MAX_RETRIES_AFTER_API_CONNECT_ERROR,
+            max_attempts=_MAX_RETRIES_AFTER_API_CONNECT_ERROR,
             base_delay_in_secs=_WAIT_TIME_IN_SECS_AFTER_REQUEST_ERROR,
             should_stop=self._should_stop,
             # The token travels in the params, so the bare url is safe to log

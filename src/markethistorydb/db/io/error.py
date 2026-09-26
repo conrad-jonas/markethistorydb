@@ -25,7 +25,7 @@ def catch_ingress_error[**P, T](func: Callable[P, T]) -> Callable[P, T]:
             functools.partial(func, *args, **kwargs),
             retry_on=(IngressError,),
             give_up_error=InsertError,
-            attempts=_MAX_RETRIES_AFTER_DB_CONNECT_ERROR,
+            max_attempts=_MAX_RETRIES_AFTER_DB_CONNECT_ERROR,
             base_delay_in_secs=_WAIT_TIME_IN_SECS_AFTER_DB_ERROR,
             description=func.__qualname__,
         )

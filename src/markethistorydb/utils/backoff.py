@@ -49,7 +49,7 @@ def _sleep(delay_in_secs: float, should_stop: Callable[[], bool]):
         time.sleep(min(_SLEEP_SLICE_IN_SECS, remaining))
 
 def call_with_backoff[T](func: Callable[[], T], retry_on: tuple[type[BaseException], ...],
-                         give_up_error: type[MarketHistoryDbError], attempts: int = 3,
+                         give_up_error: type[MarketHistoryDbError], max_attempts: int = 3,
                          base_delay_in_secs: float = 10.0, backoff_factor: float = 2.0,
                          max_delay_in_secs: float = 3600.0,
                          should_stop: Callable[[], bool] | None = None,
@@ -60,7 +60,7 @@ def call_with_backoff[T](func: Callable[[], T], retry_on: tuple[type[BaseExcepti
     :param func: Function to call, taking no arguments
     :param retry_on: Exception types worth another attempt; everything else propagates at once
     :param give_up_error: Error type raised from the last exception once the attempts are used up
-    :param attempts: Maximum number of calls, the first one included
+    :param max_attempts: Maximum number of calls, the first one included
     :param base_delay_in_secs: Delay after the first failure
     :param backoff_factor: Factor the delay grows by with every further attempt
     :param max_delay_in_secs: Upper bound on the delay
@@ -70,25 +70,26 @@ def call_with_backoff[T](func: Callable[[], T], retry_on: tuple[type[BaseExcepti
     :raises MarketHistoryDbError: Of the type passed as *give_up_error*, if the last attempt
         failed too; chained from that attempt's exception
     :raises UserInterruptError: If *should_stop* returns True while waiting between attempts
+    :raises ValueError: If *max_attempts* is below 1, which would leave no call to make
     """
+    if max_attempts < 1:
+        raise ValueError("Attempts must be at least 1, got {0}".format(max_attempts))
     name = description if description is not None else getattr(func, "__name__", repr(func))
     poll_should_stop = should_stop if should_stop is not None else (lambda: False)
-    last_error: BaseException | None = None
 
-    for attempt in range(1, attempts + 1):
+    attempt = 1
+    while True:
         try:
             return func()
         except retry_on as error:
-            last_error = error
-            if attempt == attempts:
-                break
+            if attempt >= max_attempts:
+                message = "{0} failed after {1} attempts: {2}".format(name, max_attempts, error)
+                logger.error(message)
+                raise give_up_error(message) from error
             delay_in_secs = _delay_before_retry(error, attempt, base_delay_in_secs,
                                                 backoff_factor, max_delay_in_secs)
             # A retry that is about to happen is a warning, not an error
             logger.warning("{0} failed with {1} (attempt {2} of {3}), retrying in {4:.0f} s".format(
-                name, type(error).__name__, attempt, attempts, delay_in_secs))
+                name, type(error).__name__, attempt, max_attempts, delay_in_secs))
             _sleep(delay_in_secs, poll_should_stop)
-
-    message = "{0} failed after {1} attempts: {2}".format(name, attempts, last_error)
-    logger.error(message)
-    raise give_up_error(message) from last_error
+        attempt += 1
