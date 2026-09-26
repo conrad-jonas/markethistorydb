@@ -4,7 +4,7 @@ class TableExchange(Table):
     """Constants for the 'exchange' table."""
     NAME = "exchange"
 
-    class Columns:
+    class Columns(Table.Columns):
         NAME            = "name"           # Full name of the exchange
         EXCHANGE_CODE   = "exchange_code"  # Exchange code used in EODHD APIs
         OPERATING_MIC   = "operating_mic"  # MIC codes for operating venues

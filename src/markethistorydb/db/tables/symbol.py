@@ -7,7 +7,7 @@ class TableSymbol(Table):
     """Constants for the 'symbol' table."""
     NAME = "symbol"
 
-    class Columns:
+    class Columns(Table.Columns):
         SYMBOL_CODE     = "symbol_code"
         EXCHANGE_CODE   = "exchange_code"
         TIME_FRAME      = "time_frame"
@@ -49,7 +49,7 @@ class TableSector(Table):
     """Constants for the 'sector' table."""
     NAME = "sector"
 
-    class Columns:
+    class Columns(Table.Columns):
         SYMBOL_CODE         = "symbol_code"
         EXCHANGE_CODE       = "exchange_code"
         SECTOR              = "sector"

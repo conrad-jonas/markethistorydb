@@ -1,6 +1,6 @@
 #!/usr/bin/env python12.9
 
-from markethistorydb.db.tables.table import Table
+from markethistorydb.db.tables.table import TimeSeriesTable
 
 # Dummy symbol and exchange for test purposes
 DUMMY_SYMBOL_CODE     = "DUMMY_SYMBOL"
@@ -8,15 +8,23 @@ DUMMY_EXCHANGE_CODE_A = "DUMMY_EXCHANGE_A"
 DUMMY_EXCHANGE_CODE_B = "DUMMY_EXCHANGE_B"
 DUMMY_SYMBOL_NAME     = "DUMMY_NAME"
 
+
+class FundamentalTable(TimeSeriesTable, abstract=True):
+    """Abstract base for the fundamental tables, which hold one symbol's records per row"""
+
+    class Columns(TimeSeriesTable.Columns):
+        """Columns every fundamental table has; each table's Columns extends this class"""
+        SYMBOL_CODE   = "symbol_code"
+        EXCHANGE_CODE = "exchange_code"
+
+
 # ---------------------------------------------------------------------------
 # Shared column definitions
 # ---------------------------------------------------------------------------
 
-class _BalanceSheetColumns:
+class _BalanceSheetColumns(FundamentalTable.Columns):
     """Column constants shared by balance_sheet_quarterly and balance_sheet_annually."""
-    SYMBOL_CODE                                          = "symbol_code"
-    EXCHANGE_CODE                                        = "exchange_code"
-    DATE                                                 = "date"
+    DATE                                                = "date"
     FILING_DATE                                          = "filing_date"
     CURRENCY_SYMBOL                                      = "currency_symbol"
     TOTAL_ASSETS                                         = "total_assets"
@@ -149,10 +157,8 @@ _BALANCE_SHEET_ALL_COLUMNS = (
 )
 
 
-class _CashFlowColumns:
+class _CashFlowColumns(FundamentalTable.Columns):
     """Column constants shared by cash_flow_quarterly and cash_flow_annually."""
-    SYMBOL_CODE                             = "symbol_code"
-    EXCHANGE_CODE                           = "exchange_code"
     DATE                                    = "date"
     FILING_DATE                             = "filing_date"
     CURRENCY_SYMBOL                         = "currency_symbol"
@@ -224,10 +230,8 @@ _CASH_FLOW_ALL_COLUMNS = (
 )
 
 
-class _IncomeStatementColumns:
+class _IncomeStatementColumns(FundamentalTable.Columns):
     """Column constants shared by income_statement_quarterly and income_statement_annually."""
-    SYMBOL_CODE                             = "symbol_code"
-    EXCHANGE_CODE                           = "exchange_code"
     DATE                                    = "date"
     FILING_DATE                             = "filing_date"
     CURRENCY_SYMBOL                         = "currency_symbol"
@@ -305,14 +309,12 @@ _INCOME_STATEMENT_ALL_COLUMNS = (
 # Earnings tables
 # ---------------------------------------------------------------------------
 
-class TableEarningsQuarterly(Table):
+class TableEarningsQuarterly(FundamentalTable):
     """Constants for the 'earnings_quarterly' table."""
     NAME = "earnings_quarterly"
 
-    class Columns:
-        SYMBOL_CODE         = "symbol_code"
-        EXCHANGE_CODE       = "exchange_code"
-        REPORT_DATE         = "report_date"
+    class Columns(FundamentalTable.Columns):
+        REPORT_DATE        = "report_date"
         DATE                = "date"
         BEFORE_AFTER_MARKET = "before_after_market"
         CURRENCY            = "currency"
@@ -343,14 +345,12 @@ class TableEarningsQuarterly(Table):
     )
 
 
-class TableEarningsAnnually(Table):
+class TableEarningsAnnually(FundamentalTable):
     """Constants for the 'earnings_annually' table."""
     NAME = "earnings_annually"
 
-    class Columns:
-        SYMBOL_CODE     = "symbol_code"
-        EXCHANGE_CODE   = "exchange_code"
-        DATE            = "date"
+    class Columns(FundamentalTable.Columns):
+        DATE           = "date"
         EPS_ACTUAL      = "eps_actual"
 
     TIMESTAMP_COLUMN = Columns.DATE
@@ -373,28 +373,34 @@ class TableEarningsAnnually(Table):
 # Balance sheet tables
 # ---------------------------------------------------------------------------
 
-class TableBalanceSheetQuarterly(Table):
+class TableBalanceSheetQuarterly(FundamentalTable):
     """Constants for the 'balance_sheet_quarterly' table."""
     NAME = "balance_sheet_quarterly"
-    Columns = _BalanceSheetColumns
-    TIMESTAMP_COLUMN = _BalanceSheetColumns.FILING_DATE
+
+    class Columns(_BalanceSheetColumns):
+        pass
+
+    TIMESTAMP_COLUMN = Columns.FILING_DATE
     UNIQUE_KEY_COLUMNS = (
-        _BalanceSheetColumns.SYMBOL_CODE,
-        _BalanceSheetColumns.EXCHANGE_CODE,
-        _BalanceSheetColumns.FILING_DATE,
+        Columns.SYMBOL_CODE,
+        Columns.EXCHANGE_CODE,
+        Columns.FILING_DATE,
     )
     ALL_COLUMNS = _BALANCE_SHEET_ALL_COLUMNS
 
 
-class TableBalanceSheetAnnually(Table):
+class TableBalanceSheetAnnually(FundamentalTable):
     """Constants for the 'balance_sheet_annually' table."""
     NAME = "balance_sheet_annually"
-    Columns = _BalanceSheetColumns
-    TIMESTAMP_COLUMN = _BalanceSheetColumns.FILING_DATE
+
+    class Columns(_BalanceSheetColumns):
+        pass
+
+    TIMESTAMP_COLUMN = Columns.FILING_DATE
     UNIQUE_KEY_COLUMNS = (
-        _BalanceSheetColumns.SYMBOL_CODE,
-        _BalanceSheetColumns.EXCHANGE_CODE,
-        _BalanceSheetColumns.FILING_DATE,
+        Columns.SYMBOL_CODE,
+        Columns.EXCHANGE_CODE,
+        Columns.FILING_DATE,
     )
     ALL_COLUMNS = _BALANCE_SHEET_ALL_COLUMNS
 
@@ -403,28 +409,34 @@ class TableBalanceSheetAnnually(Table):
 # Cash flow tables
 # ---------------------------------------------------------------------------
 
-class TableCashFlowQuarterly(Table):
+class TableCashFlowQuarterly(FundamentalTable):
     """Constants for the 'cash_flow_quarterly' table."""
     NAME = "cash_flow_quarterly"
-    Columns = _CashFlowColumns
-    TIMESTAMP_COLUMN = _CashFlowColumns.FILING_DATE
+
+    class Columns(_CashFlowColumns):
+        pass
+
+    TIMESTAMP_COLUMN = Columns.FILING_DATE
     UNIQUE_KEY_COLUMNS = (
-        _CashFlowColumns.SYMBOL_CODE,
-        _CashFlowColumns.EXCHANGE_CODE,
-        _CashFlowColumns.FILING_DATE,
+        Columns.SYMBOL_CODE,
+        Columns.EXCHANGE_CODE,
+        Columns.FILING_DATE,
     )
     ALL_COLUMNS = _CASH_FLOW_ALL_COLUMNS
 
 
-class TableCashFlowAnnually(Table):
+class TableCashFlowAnnually(FundamentalTable):
     """Constants for the 'cash_flow_annually' table."""
     NAME = "cash_flow_annually"
-    Columns = _CashFlowColumns
-    TIMESTAMP_COLUMN = _CashFlowColumns.FILING_DATE
+
+    class Columns(_CashFlowColumns):
+        pass
+
+    TIMESTAMP_COLUMN = Columns.FILING_DATE
     UNIQUE_KEY_COLUMNS = (
-        _CashFlowColumns.SYMBOL_CODE,
-        _CashFlowColumns.EXCHANGE_CODE,
-        _CashFlowColumns.FILING_DATE,
+        Columns.SYMBOL_CODE,
+        Columns.EXCHANGE_CODE,
+        Columns.FILING_DATE,
     )
     ALL_COLUMNS = _CASH_FLOW_ALL_COLUMNS
 
@@ -433,37 +445,38 @@ class TableCashFlowAnnually(Table):
 # Income statement tables
 # ---------------------------------------------------------------------------
 
-class TableIncomeStatementQuarterly(Table):
+class TableIncomeStatementQuarterly(FundamentalTable):
     """Constants for the 'income_statement_quarterly' table."""
     NAME = "income_statement_quarterly"
-    Columns = _IncomeStatementColumns
-    TIMESTAMP_COLUMN = _IncomeStatementColumns.FILING_DATE
+
+    class Columns(_IncomeStatementColumns):
+        pass
+
+    TIMESTAMP_COLUMN = Columns.FILING_DATE
     UNIQUE_KEY_COLUMNS = (
-        _IncomeStatementColumns.SYMBOL_CODE,
-        _IncomeStatementColumns.EXCHANGE_CODE,
-        _IncomeStatementColumns.FILING_DATE,
+        Columns.SYMBOL_CODE,
+        Columns.EXCHANGE_CODE,
+        Columns.FILING_DATE,
     )
     ALL_COLUMNS = _INCOME_STATEMENT_ALL_COLUMNS
 
 
-class TableIncomeStatementAnnually(Table):
+class TableIncomeStatementAnnually(FundamentalTable):
     """Constants for the 'income_statement_annually' table."""
     NAME = "income_statement_annually"
-    Columns = _IncomeStatementColumns
-    TIMESTAMP_COLUMN = _IncomeStatementColumns.FILING_DATE
+
+    class Columns(_IncomeStatementColumns):
+        pass
+
+    TIMESTAMP_COLUMN = Columns.FILING_DATE
     UNIQUE_KEY_COLUMNS = (
-        _IncomeStatementColumns.SYMBOL_CODE,
-        _IncomeStatementColumns.EXCHANGE_CODE,
-        _IncomeStatementColumns.FILING_DATE,
+        Columns.SYMBOL_CODE,
+        Columns.EXCHANGE_CODE,
+        Columns.FILING_DATE,
     )
     ALL_COLUMNS = _INCOME_STATEMENT_ALL_COLUMNS
 
 
-# Type Hint for tables in this class
-FundamentalTableType = (TableEarningsQuarterly | TableEarningsAnnually |
-                        TableBalanceSheetQuarterly | TableBalanceSheetAnnually |
-                        TableCashFlowQuarterly | TableCashFlowAnnually |
-                        TableIncomeStatementQuarterly | TableIncomeStatementAnnually)
 # Table names
 TABLE_NAMES_FUNDAMENTAL = [TableEarningsQuarterly.NAME, TableEarningsAnnually.NAME,
                            TableBalanceSheetQuarterly.NAME, TableBalanceSheetAnnually.NAME,

@@ -3,7 +3,6 @@
 """Interface to relational DB"""
 
 import pandas as pd
-from typing import Type
 
 from markethistorydb.db           import tables, Database
 from markethistorydb.fetch.utils  import FundamentalType, convert_df_column_names_from_camel_to_snake_case
@@ -39,7 +38,8 @@ class WriteFundamentalData(object):
         else:
             self._db.update.sector(series_sector_and_industry)
 
-    def _replace_fundamental_data_in_table(self, df_fundamental: pd.DataFrame, table: Type[tables.FundamentalTableType]):
+    def _replace_fundamental_data_in_table(self, df_fundamental: pd.DataFrame,
+                                           table: type[tables.FundamentalTable]):
         """
         Replaces historical fundamental table data for symbol into DB.
 

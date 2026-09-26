@@ -39,7 +39,7 @@ class Delete:
         self._execute_statements(statements.Symbol.DROP_SYMBOL_FROM_TABLE, format_kwargs, symbol_code, exchange_code)
 
     def _symbol_from_fundamental_table(self, symbol_code: str, exchange_code: str, table_name: str, timestamp_column: str,
-                                       unique_key_columns: list[str]):
+                                       unique_key_columns: tuple[str, ...]):
         format_kwargs = {
             "table_name": sql.Identifier(table_name),
             "table_name_copy": sql.Identifier(f"{table_name}_copy"),
