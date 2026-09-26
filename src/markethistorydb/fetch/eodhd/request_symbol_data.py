@@ -4,8 +4,10 @@
 
 import pandas as pd
 
+from collections.abc import Callable
+
 from markethistorydb.db                       import tables
-from markethistorydb.fetch.eodhd.errors       import CompatibilityError
+from markethistorydb.errors                    import CompatibilityError
 from markethistorydb.fetch.eodhd.exchange_codes import ExchangeCodes
 from markethistorydb.fetch.eodhd.request_data import RequestData
 from markethistorydb.fetch.eodhd.url          import Url
@@ -19,9 +21,9 @@ _US_EXCHANGE_CODES_MINUTE = [ExchangeCodes.NASDAQ, ExchangeCodes.NYSE]
 
 
 class RequestSymbolData(RequestData):
-    def __init__(self, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus):
-        self._api_token:         str = api_token
-        self._time_frame:       TimeFrame = time_frame
+    def __init__(self, api_token: str, time_frame: TimeFrame, symbol_status: SymbolStatus,
+                 should_stop: Callable[[], bool] | None = None):
+        super().__init__(api_token, time_frame, should_stop)
         self._symbol_status: SymbolStatus = symbol_status
 
     def _get_url_for_symbol_data(self, exchange_url_code: str) -> str:
@@ -66,7 +68,16 @@ class RequestSymbolData(RequestData):
         return df_symbols_filtered
 
     def get(self, exchange_url_code: str) -> pd.DataFrame:
-        """Requests exchange symbol meta data"""
+        """
+        Requests exchange symbol meta data.
+
+        :param exchange_url_code: Code of the exchange in the provider's URLs
+        :return: Symbols of the exchange, columns renamed to their DB names
+        :raises CompatibilityError: If the payload does not hold the expected columns
+        :raises RequestError: If the request still fails once the retries are used up
+        :raises UnauthorizedError: If the provider rejected the token
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
+        """
         url_exchange_symbols = self._get_url_for_symbol_data(exchange_url_code)
         url_params = self._get_url_params_for_symbol_data()
         # Requests data

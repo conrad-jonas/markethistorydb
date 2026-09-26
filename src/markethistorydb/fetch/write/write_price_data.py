@@ -3,11 +3,9 @@
 """Interface to time series DB"""
 
 from datetime import datetime
-from questdb.ingress import IngressError
 import pandas as pd
 
 from markethistorydb.db                import Database, tables
-from markethistorydb.fetch.errors      import InsertError
 from markethistorydb.utils  import TimeFrame, SymbolStatus
 
 
@@ -30,7 +28,4 @@ class WritePriceData(object):
     def insert_price_data(self, df_price: pd.DataFrame, series_symbol: pd.Series):
         symbol_code = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
         exchange_code = series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]
-        try:
-            self._db.insert.ohlcv(df_price, symbol_code, exchange_code, self._time_frame, self._symbol_status)
-        except IngressError:
-            raise InsertError
+        self._db.insert.ohlcv(df_price, symbol_code, exchange_code, self._time_frame, self._symbol_status)

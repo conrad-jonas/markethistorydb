@@ -5,17 +5,19 @@
 from typing import Any
 import pandas as pd
 
+from collections.abc import Callable
+
 from markethistorydb.db                       import tables
+from markethistorydb.errors                    import CompatibilityError
 from markethistorydb.fetch.utils              import FundamentalType, convert_df_column_names_from_camel_to_snake_case
-from markethistorydb.fetch.eodhd.errors       import CompatibilityError
 from markethistorydb.fetch.eodhd.request_data import RequestData
 from markethistorydb.fetch.eodhd.url          import Url
 from markethistorydb.utils         import TimeFrame
 
 class RequestFundamentalData(RequestData):
-    def __init__(self, api_token: str, time_frame: TimeFrame, series_symbol: pd.Series):
-        self._api_token: str = api_token
-        self._time_frame: TimeFrame = time_frame
+    def __init__(self, api_token: str, time_frame: TimeFrame, series_symbol: pd.Series,
+                 should_stop: Callable[[], bool] | None = None):
+        super().__init__(api_token, time_frame, should_stop)
         self._symbol_code: str = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
         self._exchange_url_code: str = series_symbol["exchange_url_code"]
 
@@ -143,7 +145,16 @@ class RequestFundamentalData(RequestData):
         return dict_fundamental_data
 
     def get(self) -> tuple[pd.Series, dict[FundamentalType, pd.DataFrame]]:
-        """Requests fundamental data for symbol"""
+        """
+        Requests fundamental data for symbol.
+
+        :return: Sector and industry of the symbol, and its records per fundamental type
+        :raises CompatibilityError: If one of the fundamental payloads does not hold the
+            expected columns
+        :raises RequestError: If the request still fails once the retries are used up
+        :raises UnauthorizedError: If the provider rejected the token
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
+        """
         url_fundamental = self._get_url_for_fundamental_data()
         url_params      = self._get_url_params_for_fundamental_data()
         # Requests data
@@ -152,8 +163,8 @@ class RequestFundamentalData(RequestData):
             # Rearranges and formats data
             series_sector_and_industry, dict_fundamental_data = self._rearrange_fundamental_data(data_fundamental)
             dict_fundamental_data = self._format_fundamental_data(dict_fundamental_data)
+            self._check_fundamental_data(series_sector_and_industry, dict_fundamental_data)
         else:
             series_sector_and_industry, dict_fundamental_data = pd.Series(dtype=object), {}
-        self._check_fundamental_data(series_sector_and_industry, dict_fundamental_data)
 
         return series_sector_and_industry, dict_fundamental_data

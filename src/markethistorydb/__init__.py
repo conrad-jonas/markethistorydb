@@ -4,6 +4,7 @@ import logging
 
 from markethistorydb.client           import Client
 from markethistorydb.config           import Config
+from markethistorydb.errors           import MarketHistoryDbError
 from markethistorydb.utils import TimeFrame, SymbolStatus
 
 # Library etiquette: the application decides where log messages go

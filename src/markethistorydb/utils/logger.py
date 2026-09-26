@@ -1,63 +1,96 @@
-#!/usr/bin/env python12.9
 
-"""Contains logger class."""
+"""Logging setup for the CLI
 
+The library itself never configures logging (see markethistorydb/__init__.py); only the CLI
+calls start_logger().
+"""
+
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 import logging
 import sys
-import os
+
+from markethistorydb.utils.redact import redact_api_token
+
+logger = logging.getLogger(__name__)
 
 
 # Bool whether to write only to terminal or also to log file
 LOG_ONLY_TO_TERMINAL = False
+# Name of the log file written to the working directory
+LOG_FILE_NAME = "markethistorydb.log"
+# Size at which the log file gets rotated, and how many rotations are kept
+_MAX_LOG_FILE_SIZE_IN_BYTES = 10 * 2**20
+_NUM_OF_LOG_FILE_BACKUPS = 5
 
 
-class Logger(object):
-    """Logger to redirect stdout and stderr."""
+class _RedactingFormatter(logging.Formatter):
+    """
+    Formatter that masks the API token in the fully formatted record, traceback included.
 
-    def __init__(self, filepath: str):
-        """Inits instance."""
+    The request layer already strips the token from the errors it raises; this is the second
+    line of defence for anything else that might carry it into a log line.
+    """
 
-        self.terminal = sys.stdout
-        self.log = open(filepath, "a")
+    def format(self, record: logging.LogRecord) -> str:
+        """
+        Formats *record*, then masks every API token in the result.
 
-    def write(self, message: str):
-        """Writes message to terminal and log file."""
-        self.terminal.write(message)
-        self.log.write(message)
+        :param record: Record to format
+        :return: Formatted record with the API token replaced by REDACTED
+        """
+        # Redacting the finished string rather than record.msg also covers the args, the
+        # traceback and the stack info, which are only added during formatting
+        return redact_api_token(super().format(record))
 
-    def flush(self):
-        """Method is needed for python 3 compatibility"""
-        pass
 
-def _setup_logger(log_only_to_terminal: bool, log_filename: str):
-    """Sets up logger"""
-    if not log_only_to_terminal:
-        # Logs also to file
-        # Log filename and path
-        log_filepath = os.getcwd() + "\\" + log_filename
-        # Redirects stdout and stderr
-        sys.stdout = Logger(log_filepath)
-        sys.stderr = sys.stdout
+def _build_formatter() -> logging.Formatter:
+    """
+    Builds the formatter used by every handler.
 
-    # Configure logging messages
-    logging.basicConfig(
-            encoding="utf-8",
-            format="{asctime} - {levelname} - {message}",
-            style="{",
-            datefmt="%d.%m.%Y-%H:%M",
-            handlers=[logging.StreamHandler(sys.stdout)]
+    :return: Formatter writing timestamp, level and message, with the API token masked
+    """
+    return _RedactingFormatter(
+        fmt="{asctime} - {levelname} - {message}",
+        style="{",
+        datefmt="%d.%m.%Y-%H:%M:%S",
     )
 
-    logging.getLogger().setLevel(logging.INFO)
-    print("")
-    logging.info("Logger has been set up")
+def _setup_logger(log_only_to_terminal: bool, log_dir: Path, level: int):
+    """
+    Sets up handlers on the root logger, replacing any this function installed before.
 
+    :param log_only_to_terminal: True writes to stdout only, skipping the rotating log file
+    :param log_dir: Directory the log file is written to
+    :param level: Level of the root logger
+    """
+    formatter = _build_formatter()
+    handlers: list[logging.Handler] = [logging.StreamHandler(sys.stdout)]
+    if not log_only_to_terminal:
+        # Rotating, so that a run over several days cannot fill the disk with one log file
+        handlers.append(RotatingFileHandler(
+            log_dir / LOG_FILE_NAME,
+            maxBytes=_MAX_LOG_FILE_SIZE_IN_BYTES,
+            backupCount=_NUM_OF_LOG_FILE_BACKUPS,
+            encoding="utf-8",
+        ))
 
-def start_logger():
-    """Sets up options and properties for app"""
-    # Sets up logger
-    name_of_this_file = os.path.basename(__file__)
-    log_filename = "{0}.log".format(name_of_this_file[:-3])
-    _setup_logger(LOG_ONLY_TO_TERMINAL, log_filename)
-    logging.info("Start {0}".format(name_of_this_file))
-    logging.info("Current working directory: {0}".format(os.getcwd()))
+    root_logger = logging.getLogger()
+    # force=True closes and drops handlers from an earlier call, so calling twice is harmless
+    logging.basicConfig(level=level, handlers=handlers, force=True)
+    for handler in root_logger.handlers:
+        handler.setFormatter(formatter)
+    # Warnings (e.g. pandas FutureWarning) belong in the log file too, not only on stderr
+    logging.captureWarnings(True)
+
+def start_logger(log_dir: Path | str | None = None, level: int = logging.INFO):
+    """
+    Sets up logging for the application.
+
+    :param log_dir: Directory the log file is written to (working directory if unset)
+    :param level: Level of the root logger
+    """
+    log_dir = Path(log_dir) if log_dir is not None else Path.cwd()
+    _setup_logger(LOG_ONLY_TO_TERMINAL, log_dir, level)
+    logger.info("Logger has been set up")
+    logger.info("Current working directory: {0}".format(Path.cwd()))

@@ -40,7 +40,15 @@ class WriteFundamentalData(object):
             self._db.update.sector(series_sector_and_industry)
 
     def _replace_fundamental_data_in_table(self, df_fundamental: pd.DataFrame, table: Type[tables.FundamentalTableType]):
-        """Replaces historical fundamental table data for symbol into DB"""
+        """
+        Replaces historical fundamental table data for symbol into DB.
+
+        :param df_fundamental: Records to write, columns still in camel case
+        :param table: Table the records are written to
+        :raises QueryError: If deleting the symbol's existing records failed
+        :raises InsertError: If the ingress write still fails once the retries are used up,
+            leaving the table without the symbol's records
+        """
         df_fundamental[tables.EarningsQuarterly.Columns.SYMBOL_CODE] = self._symbol_code
         df_fundamental[tables.EarningsQuarterly.Columns.EXCHANGE_CODE] = self._exchange_code
         df_fundamental = convert_df_column_names_from_camel_to_snake_case(df_fundamental)

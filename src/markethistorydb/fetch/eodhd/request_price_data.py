@@ -5,16 +5,18 @@
 from datetime import datetime
 import pandas as pd
 
+from collections.abc import Callable
+
 from markethistorydb.db                       import tables
-from markethistorydb.fetch.eodhd.errors       import CompatibilityError
+from markethistorydb.errors                    import CompatibilityError
 from markethistorydb.fetch.eodhd.request_data import RequestData
 from markethistorydb.fetch.eodhd.url          import Url
 from markethistorydb.utils         import TimeFrame
 
 class RequestPriceData(RequestData):
-    def __init__(self, api_token: str, time_frame: TimeFrame, series_symbol: pd.Series):
-        self._api_token:         str = api_token
-        self._time_frame:  TimeFrame = time_frame
+    def __init__(self, api_token: str, time_frame: TimeFrame, series_symbol: pd.Series,
+                 should_stop: Callable[[], bool] | None = None):
+        super().__init__(api_token, time_frame, should_stop)
         self._symbol_code:       str = series_symbol[tables.Symbol.Columns.SYMBOL_CODE]
         self._exchange_code:     str = series_symbol[tables.Symbol.Columns.EXCHANGE_CODE]
         self._exchange_url_code: str = series_symbol["exchange_url_code"]
@@ -36,7 +38,10 @@ class RequestPriceData(RequestData):
                 url_params[Url.Param.FROM] = start_datetime.strftime("%Y-%m-%d")
         else:
             if not start_datetime or not end_datetime:
-                raise ValueError
+                raise ValueError(
+                    "Minute price data for {0}.{1} needs both a start and an end datetime, "
+                    "got start={2}, end={3}".format(self._symbol_code, self._exchange_url_code,
+                                                    start_datetime, end_datetime))
             url_params[Url.Param.FROM] = str(int(start_datetime.timestamp()))
             url_params[Url.Param.TO] = str(int(end_datetime.timestamp()))
             url_params[Url.Param.INTERVAL] = Url.Value.INTERVAL_1M
@@ -83,7 +88,19 @@ class RequestPriceData(RequestData):
         return df_price
 
     def get(self, start_datetime: datetime | None = None, end_datetime: datetime | None = None) -> pd.DataFrame:
-        """Requests price data for symbol"""
+        """
+        Requests price data for symbol.
+
+        :param start_datetime: First timestamp to request (the provider's earliest if unset)
+        :param end_datetime: Last timestamp to request (the provider's latest if unset)
+        :return: Price records of the configured time frame
+        :raises ValueError: If the time frame is MINUTE and either datetime is unset, which
+            the provider's intraday endpoint does not allow
+        :raises CompatibilityError: If the payload does not hold the expected columns
+        :raises RequestError: If the request still fails once the retries are used up
+        :raises UnauthorizedError: If the provider rejected the token
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
+        """
         url_price  = self._get_url_for_price_data()
         url_params = self._get_url_params_for_price_data(start_datetime, end_datetime)
         # Requests data

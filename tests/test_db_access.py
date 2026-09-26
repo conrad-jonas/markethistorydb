@@ -23,13 +23,21 @@ from questdb.ingress    import IngressError
 
 @pytest.fixture()
 def setup_questdb(backup_and_restore_questdb: Callable):
-    """Creates QuestDB"""
+    """
+    Creates QuestDB.
+
+    :param backup_and_restore_questdb: Fixture keeping the developer's own QuestDB intact
+    """
     # Creates DB
     db_setup.setup_questdb()
 
 @pytest.fixture()
 def setup_and_cleanup_sqlite(backup_and_restore_sqlite: Callable):
-    """Creates SQLite DB, inserts dummy data and cleans up afterward"""
+    """
+    Creates SQLite DB, inserts dummy data and cleans up afterward.
+
+    :param backup_and_restore_sqlite: Fixture keeping the developer's own SQLite DB intact
+    """
     # Creates SQLite DB
     db_setup.setup_sqlite()
     # Connects SQLite DB

@@ -4,8 +4,10 @@
 
 import pandas as pd
 
+from collections.abc import Callable
+
 from markethistorydb.db                       import tables
-from markethistorydb.fetch.eodhd.errors       import CompatibilityError
+from markethistorydb.errors                    import CompatibilityError
 from markethistorydb.fetch.eodhd.request_data import RequestData
 from markethistorydb.fetch.eodhd.url          import Url
 from markethistorydb.utils         import TimeFrame
@@ -32,9 +34,9 @@ class RequestExchangeData(RequestData):
         "CountryISO3":  tables.Exchange.Columns.COUNTRY_ISO_3,
     }
 
-    def __init__(self, api_token: str, time_frame: TimeFrame):
-        self._api_token: str = api_token
-        self._time_frame: TimeFrame = time_frame
+    def __init__(self, api_token: str, time_frame: TimeFrame,
+                 should_stop: Callable[[], bool] | None = None):
+        super().__init__(api_token, time_frame, should_stop)
 
     @staticmethod
     def _get_url_for_exchanges_data() -> str:
@@ -59,7 +61,15 @@ class RequestExchangeData(RequestData):
         return df_exchanges_filtered
 
     def get(self) -> pd.DataFrame:
-        """Requests exchanges meta data"""
+        """
+        Requests exchanges meta data.
+
+        :return: Exchanges of the configured time frame, columns renamed to their DB names
+        :raises CompatibilityError: If the payload does not hold the expected columns
+        :raises RequestError: If the request still fails once the retries are used up
+        :raises UnauthorizedError: If the provider rejected the token
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
+        """
         url_exchanges = self._get_url_for_exchanges_data()
         params        = self._get_url_params_for_exchanges_data()
         # Requests data
