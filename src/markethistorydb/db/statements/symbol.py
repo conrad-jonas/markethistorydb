@@ -34,7 +34,7 @@ class StatementsSymbol:
     UPDATE_SECTOR = (
         f"UPDATE {_SECTOR_TABLE} SET {_SECTOR}=%s, {_INDUSTRY}=%s, {_GIC_SECTOR}=%s, {_GIC_GROUP}=%s, "
         f"{_GIC_INDUSTRY}=%s, {_GIC_SUB_INDUSTRY}=%s "
-        f"FROM {_SECTOR_TABLE} WHERE {_SECTOR_CODE}=%s AND {_SECTOR_EXCHANGE}=%s")
+        f"WHERE {_SECTOR_CODE}=%s AND {_SECTOR_EXCHANGE}=%s")
 
     SELECT_ALL_FROM_SYMBOL_BY_UNIQUE_KEYS = (
         f"SELECT {_SYMBOL_COLUMNS} FROM {_SYMBOL_TABLE} "
@@ -45,7 +45,7 @@ class StatementsSymbol:
     # Each element is a separate statement (QuestDB executes one statement per query); {table_name_copy}
     # is a distinct placeholder from {table_name} so sql.Identifier() quoting isn't glued to literal "_copy" text
     DROP_SYMBOL_FROM_TABLE = (
-        "CREATE TABLE {table_name_copy} AS (SELECT * FROM {table_name} WHERE symbol_code!=%s AND exchange_code!=%s) "
+        "CREATE TABLE {table_name_copy} AS (SELECT * FROM {table_name} WHERE NOT (symbol_code = %s AND exchange_code = %s)) "
         "TIMESTAMP(created_at) PARTITION BY DAY DEDUP UPSERT KEYS({unique_key_columns});",
         "DROP TABLE {table_name};",
         "RENAME TABLE {table_name_copy} TO {table_name};")
