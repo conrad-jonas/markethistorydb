@@ -4,6 +4,7 @@ import logging
 import pandas as pd
 
 from markethistorydb.db                 import Database
+from markethistorydb.errors             import NoDataError
 from markethistorydb.fetch.eodhd        import RequestSymbolData
 from markethistorydb.utils   import TimeFrame, SymbolStatus
 from markethistorydb.fetch.write        import WriteSymbolData
@@ -37,12 +38,20 @@ class DownloadSymbolData(object):
                 df_exchange_symbols["exchange_url_code"] = exchange_url_code
                 dfs_exchange_symbols.append(df_exchange_symbols)
         if not dfs_exchange_symbols:
-            logger.warning("No symbols returned for any of the requested exchanges")
-            return pd.DataFrame()
+            raise NoDataError("No symbols returned for any of the exchanges {0}".format(
+                ", ".join(series_exchange_url_codes)))
         df_symbols = pd.concat(dfs_exchange_symbols)
         return df_symbols
 
     def run(self, series_exchange_url_codes: pd.Series) -> pd.DataFrame:
+        """
+        Requests the symbol list of every exchange, stores the symbols and returns them.
+
+        :param series_exchange_url_codes: Exchange codes to request the symbol lists for
+        :return: Symbols of all exchanges, each tagged with the exchange_url_code it came from
+        :raises NoDataError: If none of the exchanges returned a single symbol
+        :raises FetchError: If a symbol list could not be fetched
+        """
         df_symbols = self._get_symbol_data(series_exchange_url_codes)
         df_symbols.apply(self.writeSymbolData.update_symbol_data, axis=1)
         return df_symbols

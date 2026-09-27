@@ -110,6 +110,9 @@ class NetworkError(FetchError):
 class CompatibilityError(FetchError):
     """Exception raised for unexpected data structure"""
 
+class NoDataError(FetchError):
+    """Exception raised when the provider returned no data where the run cannot go on without it"""
+
 class ApiError(FetchError):
     """Exception raised when the provider answered with an error status"""
 

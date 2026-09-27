@@ -156,8 +156,8 @@ class Fetcher(object):
 
         :raises AccountError: If the token, the plan's data limit or its access rights are what
             failed
-        :raises FetchError: If the exchange or symbol list could not be fetched, or too many
-            symbols failed in a row
+        :raises FetchError: If the exchange or symbol list could not be fetched or came back
+            empty, or too many symbols failed in a row
         :raises DbError: If reading from or writing to the DB failed
         :raises StorageError: If free disk space has run out
         :raises UserInterruptError: If should_stop returned True

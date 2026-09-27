@@ -56,7 +56,7 @@ through a mapped parent) exits with `UNKNOWN_ERROR` (9).
 | 9 | `UNKNOWN_ERROR` | any other `MarketHistoryDbError` | fallback for an error with no more specific mapping |
 | 10 | `STORAGE_ERROR` | `StorageError` | not enough free disk space |
 | 11 | `AUTH_ERROR` | `UnauthorizedError` | the API token was rejected |
-| 12 | `FETCH_ERROR` | `FetchError`, `ApiError`, `AccountError`, `RateLimitError`, `BadGatewayError` | fetching data from the provider failed |
+| 12 | `FETCH_ERROR` | `FetchError`, `NetworkError`, `NoDataError`, `ApiError`, `AccountError`, `RateLimitError`, `BadGatewayError` | fetching data from the provider failed |
 | 13 | `DATA_LIMIT_ERROR` | `DataLimitError` | the API plan's data limit has been reached |
 | 14 | `ACCESS_RIGHTS_ERROR` | `AccessRightsError` | the plan does not cover the requested endpoint |
 
@@ -69,7 +69,9 @@ MarketHistoryDbError
 ├── UserInterruptError             (4)
 ├── FetchError                     (12)
 │   ├── RequestError               (3)
+│   ├── NetworkError               (12)
 │   ├── CompatibilityError         (7)
+│   ├── NoDataError                (12)
 │   └── ApiError                   (12)
 │       ├── AccountError           (12)
 │       │   ├── UnauthorizedError  (11)
