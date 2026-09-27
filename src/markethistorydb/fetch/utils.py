@@ -1,10 +1,12 @@
 #!/usr/bin/env python12.9
 
-"""Enums and helper functions"""
+"""Constants, data classes and helper functions for fetching and validating data from eodhd.com."""
 
 from dataclasses import dataclass
 from enum import Enum
 import pandas as pd
+
+import markethistorydb.db.tables as tables
 
 
 @dataclass(frozen=True)
@@ -27,6 +29,20 @@ class FundamentalType(Enum):
     CASH_FLOW_ANNUALLY          = 7
     INCOME_STATEMENT_QUARTERLY  = 8
     INCOME_STATEMENT_ANNUALLY   = 9
+
+
+# Table the records of each fundamental type are written to, in the order they are requested
+# and written. Sector and industry are a single record per symbol and go to tables.Sector.
+TABLE_PER_FUNDAMENTAL_TYPE: dict[FundamentalType, type[tables.FundamentalTable]] = {
+    FundamentalType.EARNINGS_QUARTERLY:         tables.EarningsQuarterly,
+    FundamentalType.EARNINGS_ANNUALLY:          tables.EarningsAnnually,
+    FundamentalType.BALANCE_SHEET_QUARTERLY:    tables.BalanceSheetQuarterly,
+    FundamentalType.BALANCE_SHEET_ANNUALLY:     tables.BalanceSheetAnnually,
+    FundamentalType.CASH_FLOW_QUARTERLY:        tables.CashFlowQuarterly,
+    FundamentalType.CASH_FLOW_ANNUALLY:         tables.CashFlowAnnually,
+    FundamentalType.INCOME_STATEMENT_QUARTERLY: tables.IncomeStatementQuarterly,
+    FundamentalType.INCOME_STATEMENT_ANNUALLY:  tables.IncomeStatementAnnually,
+}
 
 
 def convert_df_column_names_from_camel_to_snake_case(df: pd.DataFrame) -> pd.DataFrame:

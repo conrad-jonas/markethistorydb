@@ -5,7 +5,8 @@
 import pandas as pd
 
 from markethistorydb.db           import tables, Database
-from markethistorydb.fetch.utils  import FundamentalType, convert_df_column_names_from_camel_to_snake_case
+from markethistorydb.fetch.utils  import (FundamentalType, TABLE_PER_FUNDAMENTAL_TYPE,
+                                          convert_df_column_names_from_camel_to_snake_case)
 
 
 class WriteFundamentalData(object):
@@ -61,19 +62,14 @@ class WriteFundamentalData(object):
                               table.TIMESTAMP_COLUMN)
 
     def replace_fundamental_data(self, dict_symbol_fundamental: dict[FundamentalType, pd.DataFrame]):
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.EARNINGS_QUARTERLY],
-                                                tables.EarningsQuarterly)
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.EARNINGS_ANNUALLY],
-                                                tables.EarningsAnnually)
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.BALANCE_SHEET_QUARTERLY],
-                                                tables.BalanceSheetQuarterly)
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.BALANCE_SHEET_ANNUALLY],
-                                                tables.BalanceSheetAnnually)
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.CASH_FLOW_QUARTERLY],
-                                                tables.CashFlowQuarterly)
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.CASH_FLOW_ANNUALLY],
-                                                tables.CashFlowAnnually)
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.INCOME_STATEMENT_QUARTERLY],
-                                                tables.IncomeStatementQuarterly)
-        self._replace_fundamental_data_in_table(dict_symbol_fundamental[FundamentalType.INCOME_STATEMENT_ANNUALLY],
-                                                tables.IncomeStatementAnnually)
+        """
+        Replaces the symbol's records in the table of every fundamental type in
+        *dict_symbol_fundamental*; the tables of types it leaves out are not touched.
+
+        :param dict_symbol_fundamental: Records per fundamental type
+        :raises QueryError: If deleting the symbol's existing records failed
+        :raises InsertError: If the ingress write still fails once the retries are used up
+        """
+        for fundamental_type, df_fundamental in dict_symbol_fundamental.items():
+            self._replace_fundamental_data_in_table(df_fundamental,
+                                                    TABLE_PER_FUNDAMENTAL_TYPE[fundamental_type])

@@ -73,7 +73,7 @@ class RequestSymbolData(RequestData):
 
         :param exchange_url_code: Code of the exchange in the provider's URLs
         :return: Symbols of the exchange, columns renamed to their DB names
-        :raises CompatibilityError: If the payload does not hold the expected columns
+        :raises CompatibilityError: If the payload is not a JSON array or lacks an expected column
         :raises RequestError: If the request still fails once the retries are used up
         :raises UnauthorizedError: If the provider rejected the token
         :raises UserInterruptError: If should_stop returned True while waiting to retry
@@ -81,7 +81,7 @@ class RequestSymbolData(RequestData):
         url_exchange_symbols = self._get_url_for_symbol_data(exchange_url_code)
         url_params = self._get_url_params_for_symbol_data()
         # Requests data
-        data_exchange_symbols = self._request_data_from_url(url_exchange_symbols, url_params)
+        data_exchange_symbols = self._request_list(url_exchange_symbols, url_params)
         if data_exchange_symbols:
             # Creates and formats df
             df_symbols = pd.DataFrame(data_exchange_symbols)

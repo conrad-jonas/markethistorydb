@@ -65,7 +65,7 @@ class RequestExchangeData(RequestData):
         Requests exchanges meta data.
 
         :return: Exchanges of the configured time frame, columns renamed to their DB names
-        :raises CompatibilityError: If the payload does not hold the expected columns
+        :raises CompatibilityError: If the payload is not a JSON array or lacks an expected column
         :raises RequestError: If the request still fails once the retries are used up
         :raises UnauthorizedError: If the provider rejected the token
         :raises UserInterruptError: If should_stop returned True while waiting to retry
@@ -73,7 +73,7 @@ class RequestExchangeData(RequestData):
         url_exchanges = self._get_url_for_exchanges_data()
         params        = self._get_url_params_for_exchanges_data()
         # Requests data
-        data_exchanges = self._request_data_from_url(url_exchanges, params)
+        data_exchanges = self._request_list(url_exchanges, params)
         # Creates and formats df
         df_exchanges = pd.DataFrame(data_exchanges)
         self._check_exchange_data(df_exchanges)

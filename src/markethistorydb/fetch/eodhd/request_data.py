@@ -3,7 +3,7 @@
 """Abstract class for requesting trading data from eodhd.com"""
 
 from abc             import abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from json            import JSONDecodeError
 from typing          import Any
 import functools
@@ -42,6 +42,10 @@ _RETRYABLE_ERRORS = (
     NetworkError,
 )
 
+# Parsed JSON bodies: every endpoint answers with either one object or an array of objects
+type JsonObject  = dict[str, Any]
+type JsonPayload = list[JsonObject] | JsonObject
+
 
 class RequestData(object):
 
@@ -64,9 +68,9 @@ class RequestData(object):
         Cuts the response body down to what goes into an error message.
 
         :param response: Response the provider answered with
-        :return: Beginning of the response body
+        :return: Beginning of the response body, with the API token masked
         """
-        return response.text[:_MAX_ERROR_DETAIL_LENGTH]
+        return redact_api_token(response.text)[:_MAX_ERROR_DETAIL_LENGTH]
 
     @staticmethod
     def _retry_after_in_secs(response: requests.Response) -> float | None:
@@ -119,7 +123,7 @@ class RequestData(object):
         if not response.ok:
             raise ApiError(self._error_detail(response), status)
 
-    def _get(self, url: str, params: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any] | None:
+    def _get(self, url: str, params: dict[str, Any]) -> JsonPayload | None:
         """
         Performs one request; every retry calls this again.
 
@@ -153,8 +157,7 @@ class RequestData(object):
                 "Response with status code {0} is not JSON: {1}".format(
                     response.status_code, self._error_detail(response))) from error
 
-    def _request_data_from_url(self, url: str,
-                               params: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any] | None:
+    def _request_data_from_url(self, url: str, params: dict[str, Any]) -> JsonPayload | None:
         """
         Requests data from URL, retrying the errors that are worth retrying.
 
@@ -180,11 +183,64 @@ class RequestData(object):
             description="Request to {0}".format(url),
         )
 
+    def _request_list(self, url: str, params: dict[str, Any]) -> list[JsonObject]:
+        """
+        Requests data from an endpoint that answers with an array of objects.
+
+        :param url: URL to request
+        :param params: Query parameters, API token included
+        :return: Parsed JSON array; empty if the provider knows no such ticker or has no data
+        :raises CompatibilityError: If the body is not JSON, or is not an array
+        :raises RequestError: If the request still fails once the retries are used up, or failed
+            in a way no retry can fix; the message never holds the API token
+        :raises AccountError: If the token, the plan's data limit or its access rights are what
+            failed
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
+        """
+        data = self._request_data_from_url(url, params)
+        # An empty object counts as "no data" as well, as the callers have always treated it
+        if not data:
+            return []
+        if not isinstance(data, list):
+            raise CompatibilityError("Expected a JSON array from {0}, got a {1}".format(
+                url, type(data).__name__))
+        return data
+
+    def _request_object(self, url: str, params: dict[str, Any]) -> JsonObject:
+        """
+        Requests data from an endpoint that answers with a single object.
+
+        :param url: URL to request
+        :param params: Query parameters, API token included
+        :return: Parsed JSON object; empty if the provider knows no such ticker or has no data
+        :raises CompatibilityError: If the body is not JSON, or is not an object
+        :raises RequestError: If the request still fails once the retries are used up, or failed
+            in a way no retry can fix; the message never holds the API token
+        :raises AccountError: If the token, the plan's data limit or its access rights are what
+            failed
+        :raises UserInterruptError: If should_stop returned True while waiting to retry
+        """
+        data = self._request_data_from_url(url, params)
+        # An empty array counts as "no data" as well, as the callers have always treated it
+        if not data:
+            return {}
+        if not isinstance(data, dict):
+            raise CompatibilityError("Expected a JSON object from {0}, got a {1}".format(
+                url, type(data).__name__))
+        return data
+
     @staticmethod
-    def _has_columns(df: pd.DataFrame, expected_column_names: list[str]):
-        if list(df)[:len(expected_column_names)] != expected_column_names:
-            return False
-        return True
+    def _has_columns(df: pd.DataFrame, expected_column_names: Iterable[str]) -> bool:
+        """
+        Checks that *df* holds every expected column.
+
+        :param df: Frame built from the provider's payload
+        :param expected_column_names: Columns the frame must hold
+        :return: True if every one of *expected_column_names* is a column of *df*, whatever the
+            order; columns beyond them are allowed
+        """
+        # The order of the keys in a JSON object carries no meaning
+        return set(expected_column_names).issubset(df.columns)
 
     @abstractmethod
     def get(self, *args: Any, **kwargs: Any) -> pd.DataFrame | tuple[pd.Series, dict[FundamentalType, pd.DataFrame]]:

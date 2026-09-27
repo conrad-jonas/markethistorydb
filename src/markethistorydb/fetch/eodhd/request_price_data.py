@@ -96,7 +96,7 @@ class RequestPriceData(RequestData):
         :return: Price records of the configured time frame
         :raises ValueError: If the time frame is MINUTE and either datetime is unset, which
             the provider's intraday endpoint does not allow
-        :raises CompatibilityError: If the payload does not hold the expected columns
+        :raises CompatibilityError: If the payload is not a JSON array or lacks an expected column
         :raises RequestError: If the request still fails once the retries are used up
         :raises UnauthorizedError: If the provider rejected the token
         :raises UserInterruptError: If should_stop returned True while waiting to retry
@@ -104,7 +104,7 @@ class RequestPriceData(RequestData):
         url_price  = self._get_url_for_price_data()
         url_params = self._get_url_params_for_price_data(start_datetime, end_datetime)
         # Requests data
-        data_price = self._request_data_from_url(url_price, url_params)
+        data_price = self._request_list(url_price, url_params)
         # Creates and formats df
         if data_price:
             df_price = pd.DataFrame(data_price)
