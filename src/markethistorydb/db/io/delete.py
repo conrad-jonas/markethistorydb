@@ -30,11 +30,10 @@ class Delete:
             params = [symbol_code, exchange_code] if "%s" in statement_template else []
             self._query.execute(query, params)
 
-    def _symbol_from_symbol_table(self, symbol_code: str, exchange_code: str, table_name: str, unique_key_columns: list[str]):
+    def _symbol_from_symbol_table(self, symbol_code: str, exchange_code: str, table_name: str):
         format_kwargs = {
             "table_name": sql.Identifier(table_name),
             "table_name_copy": sql.Identifier(f"{table_name}_copy"),
-            "unique_key_columns": sql.SQL(', ').join(map(sql.Identifier, unique_key_columns)),
         }
         self._execute_statements(statements.Symbol.DROP_SYMBOL_FROM_TABLE, format_kwargs, symbol_code, exchange_code)
 
@@ -56,10 +55,10 @@ class Delete:
             statement_templates = statements.Price.DROP_SYMBOL_FROM_MINUTE_OHLCV
         self._execute_statements(statement_templates, {}, symbol_code, exchange_code)
 
-    def symbol_from_table(self, symbol_code: str, exchange_code: str, table_name: str, timestamp_column: str,
-                          unique_key_columns: list[str]):
+    def symbol_from_table(self, symbol_code: str, exchange_code: str, table_name: str, timestamp_column: str | None,
+                          unique_key_columns: tuple[str, ...]):
         if table_name in tables.TABLE_NAMES_SYMBOL:
-            self._symbol_from_symbol_table(symbol_code, exchange_code, table_name, unique_key_columns)
+            self._symbol_from_symbol_table(symbol_code, exchange_code, table_name)
         elif table_name in tables.TABLE_NAMES_FUNDAMENTAL:
             self._symbol_from_fundamental_table(symbol_code, exchange_code, table_name, timestamp_column,
                                                 unique_key_columns)

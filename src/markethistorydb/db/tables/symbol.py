@@ -17,10 +17,9 @@ class TableSymbol(Table):
         CURRENCY        = "currency"
         TYPE            = "type"
         ISIN            = "isin"
-        CREATED_AT      = "created_at"
 
-    # Designated timestamp column
-    TIMESTAMP_COLUMN = Columns.CREATED_AT
+    # No designated timestamp
+    TIMESTAMP_COLUMN = None
 
     # Columns that form the unique key
     UNIQUE_KEY_COLUMNS = (
@@ -41,7 +40,6 @@ class TableSymbol(Table):
         Columns.CURRENCY,
         Columns.TYPE,
         Columns.ISIN,
-        Columns.CREATED_AT,
     )
 
 
@@ -58,10 +56,9 @@ class TableSector(Table):
         GIC_GROUP           = "gic_group"
         GIC_INDUSTRY        = "gic_industry"
         GIC_SUB_INDUSTRY    = "gic_sub_industry"
-        CREATED_AT          = "created_at"
 
-    # Designated timestamp column
-    TIMESTAMP_COLUMN = Columns.CREATED_AT
+    # No designated timestamp
+    TIMESTAMP_COLUMN = None
 
     # Columns that form the unique/dedup key
     UNIQUE_KEY_COLUMNS = (
@@ -79,7 +76,6 @@ class TableSector(Table):
         Columns.GIC_GROUP,
         Columns.GIC_INDUSTRY,
         Columns.GIC_SUB_INDUSTRY,
-        Columns.CREATED_AT,
     )
 
 

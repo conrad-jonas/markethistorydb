@@ -64,7 +64,7 @@ class RequestSymbolData(RequestData):
         df_symbols_filtered = df_symbols_filtered.rename(columns=self._API_COLUMN_TO_DB_COLUMN)
         df_symbols_filtered.insert(1, tables.Symbol.Columns.TIME_FRAME, self._time_frame.name)
         df_symbols_filtered.insert(2, tables.Symbol.Columns.SYMBOL_STATUS, self._symbol_status.name)
-        df_symbols_filtered = df_symbols_filtered[tables.Symbol.ALL_COLUMNS[:-1]]
+        df_symbols_filtered = df_symbols_filtered[list(tables.Symbol.ALL_COLUMNS)]
         return df_symbols_filtered
 
     def get(self, exchange_url_code: str) -> pd.DataFrame:

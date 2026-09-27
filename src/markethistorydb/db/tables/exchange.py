@@ -12,10 +12,9 @@ class TableExchange(Table):
         CURRENCY        = "currency"       # Default trading currency
         COUNTRY_ISO_2   = "country_iso_2"  # ISO2 country code
         COUNTRY_ISO_3   = "country_iso_3"  # ISO3 country code
-        CREATED_AT      = "created_at"
 
-    # Designated timestamp column
-    TIMESTAMP_COLUMN = Columns.CREATED_AT
+    # No designated timestamp: the table is not partitioned, so not WAL, see schema/exchange.sql
+    TIMESTAMP_COLUMN = None
 
     # Columns that form the unique/dedup key
     UNIQUE_KEY_COLUMNS = (
@@ -31,7 +30,6 @@ class TableExchange(Table):
         Columns.CURRENCY,
         Columns.COUNTRY_ISO_2,
         Columns.COUNTRY_ISO_3,
-        Columns.CREATED_AT,
     )
 
 

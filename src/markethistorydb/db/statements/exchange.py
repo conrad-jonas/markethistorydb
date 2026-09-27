@@ -11,9 +11,12 @@ _COUNTRY        = tables.Exchange.Columns.COUNTRY
 _CURRENCY       = tables.Exchange.Columns.CURRENCY
 _COUNTRY_ISO_2  = tables.Exchange.Columns.COUNTRY_ISO_2
 _COUNTRY_ISO_3  = tables.Exchange.Columns.COUNTRY_ISO_3
+_PLACEHOLDERS   = ", ".join(["%s"] * len(tables.Exchange.ALL_COLUMNS))
 
 
 class StatementsExchange:
+    INSERT_EXCHANGE = f"INSERT INTO {_TABLE} ({_COLUMNS}) VALUES ({_PLACEHOLDERS})"
+
     UPDATE_EXCHANGE = (
         f"UPDATE {_TABLE} SET {_NAME}=%s, {_OPERATING_MIC}=%s, {_COUNTRY}=%s, {_CURRENCY}=%s, "
         f"{_COUNTRY_ISO_2}=%s, {_COUNTRY_ISO_3}=%s WHERE {_EXCHANGE_CODE}=%s")
