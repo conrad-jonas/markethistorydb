@@ -11,6 +11,20 @@ pip install .      # as a package
 
 Copy `.env.example` to `.env` and fill in `EODHD_API_TOKEN` and `QUESTDB_PASSWORD`.
 
+### QuestDB server settings
+
+Add to the QuestDB instance's `server.conf` (and restart it):
+
+```
+line.auto.create.new.columns=false
+```
+
+By default QuestDB adds a column for every field an ILP write carries that the table lacks. A
+field eodhd.com starts to send would then quietly become a new column. With the setting off, the
+write is rejected instead and the symbol fails with `SchemaMismatchError` (exit code 7). Fundamentals
+are checked against their table before the symbol's stored records are replaced, so a rejected
+write never leaves them deleted.
+
 ## CLI usage
 
 ```
@@ -51,7 +65,7 @@ through a mapped parent) exits with `UNKNOWN_ERROR` (9).
 | 4 | `USER_INTERRUPT_ERROR` | `UserInterruptError`, `KeyboardInterrupt` | the run was interrupted (Ctrl+C) |
 | 5 | `INSERT_ERROR` | `InsertError` | writing to QuestDB failed |
 | 6 | `CONFIG_ERROR` | `ConfigError` | configuration problem, e.g. a missing or unusable environment variable |
-| 7 | `COMPATIBILITY_ERROR` | `CompatibilityError` | the provider's data no longer has the expected structure |
+| 7 | `COMPATIBILITY_ERROR` | `CompatibilityError`, `SchemaMismatchError` | the provider's data no longer has the expected structure, or no longer fits the tables |
 | 8 | `DB_ERROR` | `DbError`, `QueryError` | the DB is unreachable or a statement failed |
 | 9 | `UNKNOWN_ERROR` | any other `MarketHistoryDbError` | fallback for an error with no more specific mapping |
 | 10 | `STORAGE_ERROR` | `StorageError` | not enough free disk space |
@@ -81,6 +95,7 @@ MarketHistoryDbError
 │       └── BadGatewayError        (12)
 └── DbError                        (8)
     ├── InsertError                (5)
+    │   └── SchemaMismatchError    (7)
     └── QueryError                 (8)
 ```
 

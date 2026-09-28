@@ -167,5 +167,15 @@ class DbError(MarketHistoryDbError):
 class InsertError(DbError):
     """Exception raised when insert into db failed"""
 
+class SchemaMismatchError(InsertError):
+    """
+    Exception raised when the DB rejected records that do not fit the table: a column the table
+    does not have, or a value of a type its column cannot store.
+
+    QuestDB is meant to run with line.auto.create.new.columns=false, so that a field the provider
+    starts sending ends up here instead of silently as a new column. Most likely the provider
+    changed its payload, so no retry can help.
+    """
+
 class QueryError(DbError):
     """Exception raised when a query failed or returned an unexpected number of records"""

@@ -45,7 +45,10 @@ class Insert:
         :param table_name: Name of the target table, one with a designated timestamp: ILP over
             HTTP only writes WAL tables, and only those have one
         :param timestamp_column: Name of the df column holding the designated timestamp
-        :raises InsertError: If the ingress write still fails once the retries are used up
+        :raises SchemaMismatchError: If the DB rejected the records for not fitting the table,
+            e.g. a column the table does not have or a value its column's type cannot store
+        :raises InsertError: If the ingress write still fails once the retries are used up, or
+            fails in another way no retry can fix (e.g. a timestamp before 1970)
         """
         with Sender.from_conf(self._config.http_conf) as sender:
             sender.dataframe(df, table_name=table_name, at=timestamp_column)
