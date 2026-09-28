@@ -50,6 +50,26 @@ Nothing is read from the environment at import time; `Client()` without a config
 The library never configures logging; add your own handlers. Pass `should_stop=callable` to
 `client.fetch` to abort between symbols.
 
+## Data before 1970
+
+QuestDB cannot store a designated timestamp before 1970-01-01: the server rejects one written
+through SQL, and the ingress client refuses to send one. Every record whose designated timestamp
+is earlier is therefore dropped before it is written: prices by their `timestamp`, fundamentals
+by their table's designated timestamp (`report_date` for quarterly earnings, `date` for annual
+earnings, `filing_date` for the balance sheet, cash flow and income statements). Each symbol with dropped records gets a warning naming the table (or
+price time frame) and the number of records, e.g.
+
+```
+Dropped 1843 DAILY price records of IBM.NYSE from before 1970, which QuestDB cannot store
+```
+
+This mostly affects the daily prices of old US stocks, which eodhd.com has back to the 1960s.
+If every price eodhd.com sends for a symbol is from before 1970, nothing is stored for it. If
+every fundamental record it sends for one of the tables is, the records already stored for the
+symbol in that table are left in place: the replacement would otherwise delete them and write
+nothing. Date columns that are not the designated timestamp (e.g. a statement's `date`) are
+stored as they are, even before 1970.
+
 ## Error handling
 
 Every error the CLI can end a run with is a subclass of `MarketHistoryDbError`

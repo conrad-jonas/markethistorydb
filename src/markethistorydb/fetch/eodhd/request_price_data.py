@@ -74,17 +74,19 @@ class RequestPriceData(RequestData):
             raise CompatibilityError("Daily price data has unexpected structure!")
 
     def _format_price_data(self, df_price: pd.DataFrame) -> pd.DataFrame:
+        """
+        Maps the provider's columns to the columns of the price table.
+
+        :param df_price: Price records as the provider sent them
+        :return: Frame with the table's columns and the symbol's codes
+        """
         df_price.insert(0, tables.DailyOhlcv.Columns.EXCHANGE_CODE, self._exchange_code)
         df_price.insert(1, tables.DailyOhlcv.Columns.SYMBOL_CODE, self._symbol_code)
         if self._time_frame == TimeFrame.MINUTE:
             df_price = df_price.rename(columns={self._ApiColumns.GMT_OFFSET: tables.MinuteOhlcv.Columns.GMT_OFFSET})
-            df_price[tables.MinuteOhlcv.Columns.TIMESTAMP] = pd.to_datetime(
-                df_price[self._ApiColumns.TIMESTAMP], unit='s')
             df_price = df_price.drop(self._ApiColumns.DATETIME, axis=1)
         else:
-            df_price[tables.DailyOhlcv.Columns.TIMESTAMP] = pd.to_datetime(df_price[self._ApiColumns.DATE])
-            df_price = df_price.drop(self._ApiColumns.DATE, axis=1)
-            df_price = df_price[df_price[tables.DailyOhlcv.Columns.TIMESTAMP] >= datetime.fromtimestamp(0)]
+            df_price = df_price.rename(columns={self._ApiColumns.DATE: tables.DailyOhlcv.Columns.TIMESTAMP})
         return df_price
 
     def get(self, start_datetime: datetime | None = None, end_datetime: datetime | None = None) -> pd.DataFrame:

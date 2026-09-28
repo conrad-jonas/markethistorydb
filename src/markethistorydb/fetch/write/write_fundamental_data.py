@@ -9,7 +9,8 @@ import pandas as pd
 from markethistorydb.db           import tables, Database
 from markethistorydb.errors       import SchemaMismatchError
 from markethistorydb.fetch.utils  import (FundamentalType, TABLE_PER_FUNDAMENTAL_TYPE,
-                                          convert_df_column_names_from_camel_to_snake_case)
+                                          convert_df_column_names_from_camel_to_snake_case,
+                                          drop_records_before_1970)
 
 logger = logging.getLogger(__name__)
 
@@ -84,13 +85,15 @@ class WriteFundamentalData(object):
             frame is not modified
         :param table: Table the records are written to
         :return: New frame with snake case columns, the symbol's codes and the types the table
-            stores. Records without a designated timestamp are dropped, since QuestDB cannot
-            store them.
+            stores. Records without a designated timestamp or with one from before 1970 are
+            dropped, since QuestDB cannot store them; a warning is logged for the latter.
         """
         df_records = convert_df_column_names_from_camel_to_snake_case(df_fundamental.copy())
         df_records[table.Columns.SYMBOL_CODE] = self._symbol_code
         df_records[table.Columns.EXCHANGE_CODE] = self._exchange_code
         df_records = self._adjust_data_types(df_records, table.TIMESTAMP_COLUMN)
+        df_records = drop_records_before_1970(df_records, table.TIMESTAMP_COLUMN, table.NAME,
+                                        "{0}.{1}".format(self._symbol_code, self._exchange_code))
         return df_records
 
 
@@ -115,7 +118,7 @@ class WriteFundamentalData(object):
                                            table: type[tables.FundamentalTable]):
         """
         Replaces the symbol's records in *table* with *df_fundamental*. Converts data types and 
-        drops records without a designated timestamp, since QuestDB cannot store them.
+        drops records without a designated timestamp or with one from before 1970, since QuestDB cannot store them.
 
 
         :param df_fundamental: Records to write, columns still in camel case
@@ -129,7 +132,7 @@ class WriteFundamentalData(object):
         df_records = self._prepare_data_for_db(df_fundamental, table)
         self._check_columns(df_records, table)
         if df_records.empty:
-            logger.warning("No {0} records with a {1} for {2}.{3}, keeping the stored ones".format(
+            logger.warning("No {0} records with a {1} from 1970 on for {2}.{3}, keeping the stored ones".format(
                 table.NAME, table.TIMESTAMP_COLUMN, self._symbol_code, self._exchange_code))
             return
         self._db.delete.symbol_from_table(self._symbol_code, self._exchange_code,
