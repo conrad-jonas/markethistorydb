@@ -91,13 +91,17 @@ class DownloadPriceData(object):
 
         :param series_symbol: Symbol the data is requested for
         :param start_datetime: Start of the whole time period (_START_DATE_MINUTE_DATA if unset)
-        :return: Merged minute price records for the whole time period
+        :return: Merged minute price records for the whole time period, empty if the stored data
+            is already up to date
         :raises FetchError: If one of the requests failed or a payload has an unexpected structure
         :raises UserInterruptError: If should_stop returned True while waiting to retry
         """
         # Contains the start and end datetime for each minute data request
         minute_data_time_periods: list[tuple[datetime, datetime]] = (
             self._get_time_periods_for_minute_data_requests(start_datetime))
+        if not minute_data_time_periods:
+            # Stored data reaches today already, so there is nothing to request
+            return pd.DataFrame()
 
         dfs_symbol_for_all_time_periods: list[pd.DataFrame] = []
         price_data_requester = RequestPriceData(self._api_token, self.time_frame, series_symbol,
@@ -119,7 +123,8 @@ class DownloadPriceData(object):
         Requests price data from eodhd.com and inserts it into QuestDB.
 
         :param series_symbol: Symbol the data is requested for
-        :return: True if successful else False
+        :return: True if price records were stored, False if the provider has none for the
+            symbol or all of them are from before 1970, which QuestDB cannot store
         :raises FetchError: If a request failed or a payload has an unexpected structure
         :raises QueryError: If reading the symbol's newest record failed
         :raises InsertError: If the ingress write still fails once the retries are used up
@@ -139,6 +144,5 @@ class DownloadPriceData(object):
             successful_download = False
         else:
             # Inserts symbol price data
-            self.writePriceData.insert_price_data(df_price, series_symbol)
-            successful_download = True
+            successful_download = self.writePriceData.insert_price_data(df_price, series_symbol)
         return successful_download

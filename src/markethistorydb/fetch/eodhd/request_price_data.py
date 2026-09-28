@@ -74,17 +74,19 @@ class RequestPriceData(RequestData):
             raise CompatibilityError("Daily price data has unexpected structure!")
 
     def _format_price_data(self, df_price: pd.DataFrame) -> pd.DataFrame:
+        """
+        Maps the provider's columns to the columns of the price table.
+
+        :param df_price: Price records as the provider sent them
+        :return: Frame with the table's columns and the symbol's codes
+        """
         df_price.insert(0, tables.DailyOhlcv.Columns.EXCHANGE_CODE, self._exchange_code)
         df_price.insert(1, tables.DailyOhlcv.Columns.SYMBOL_CODE, self._symbol_code)
         if self._time_frame == TimeFrame.MINUTE:
             df_price = df_price.rename(columns={self._ApiColumns.GMT_OFFSET: tables.MinuteOhlcv.Columns.GMT_OFFSET})
-            df_price[tables.MinuteOhlcv.Columns.TIMESTAMP] = pd.to_datetime(
-                df_price[self._ApiColumns.TIMESTAMP], unit='s')
             df_price = df_price.drop(self._ApiColumns.DATETIME, axis=1)
         else:
-            df_price[tables.DailyOhlcv.Columns.TIMESTAMP] = pd.to_datetime(df_price[self._ApiColumns.DATE])
-            df_price = df_price.drop(self._ApiColumns.DATE, axis=1)
-            df_price = df_price[df_price[tables.DailyOhlcv.Columns.TIMESTAMP] >= datetime.fromtimestamp(0)]
+            df_price = df_price.rename(columns={self._ApiColumns.DATE: tables.DailyOhlcv.Columns.TIMESTAMP})
         return df_price
 
     def get(self, start_datetime: datetime | None = None, end_datetime: datetime | None = None) -> pd.DataFrame:
@@ -96,7 +98,7 @@ class RequestPriceData(RequestData):
         :return: Price records of the configured time frame
         :raises ValueError: If the time frame is MINUTE and either datetime is unset, which
             the provider's intraday endpoint does not allow
-        :raises CompatibilityError: If the payload does not hold the expected columns
+        :raises CompatibilityError: If the payload is not a JSON array or lacks an expected column
         :raises RequestError: If the request still fails once the retries are used up
         :raises UnauthorizedError: If the provider rejected the token
         :raises UserInterruptError: If should_stop returned True while waiting to retry
@@ -104,7 +106,7 @@ class RequestPriceData(RequestData):
         url_price  = self._get_url_for_price_data()
         url_params = self._get_url_params_for_price_data(start_datetime, end_datetime)
         # Requests data
-        data_price = self._request_data_from_url(url_price, url_params)
+        data_price = self._request_list(url_price, url_params)
         # Creates and formats df
         if data_price:
             df_price = pd.DataFrame(data_price)

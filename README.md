@@ -11,6 +11,20 @@ pip install .      # as a package
 
 Copy `.env.example` to `.env` and fill in `EODHD_API_TOKEN` and `QUESTDB_PASSWORD`.
 
+### QuestDB server settings
+
+Add to the QuestDB instance's `server.conf` (and restart it):
+
+```
+line.auto.create.new.columns=false
+```
+
+By default QuestDB adds a column for every field an ILP write carries that the table lacks. A
+field eodhd.com starts to send would then quietly become a new column. With the setting off, the
+write is rejected instead and the symbol fails with `SchemaMismatchError` (exit code 7). Fundamentals
+are checked against their table before the symbol's stored records are replaced, so a rejected
+write never leaves them deleted.
+
 ## CLI usage
 
 ```
@@ -36,6 +50,26 @@ Nothing is read from the environment at import time; `Client()` without a config
 The library never configures logging; add your own handlers. Pass `should_stop=callable` to
 `client.fetch` to abort between symbols.
 
+## Data before 1970
+
+QuestDB cannot store a designated timestamp before 1970-01-01: the server rejects one written
+through SQL, and the ingress client refuses to send one. Every record whose designated timestamp
+is earlier is therefore dropped before it is written: prices by their `timestamp`, fundamentals
+by their table's designated timestamp (`report_date` for quarterly earnings, `date` for annual
+earnings, `filing_date` for the balance sheet, cash flow and income statements). Each symbol with dropped records gets a warning naming the table (or
+price time frame) and the number of records, e.g.
+
+```
+Dropped 1843 DAILY price records of IBM.NYSE from before 1970, which QuestDB cannot store
+```
+
+This mostly affects the daily prices of old US stocks, which eodhd.com has back to the 1960s.
+If every price eodhd.com sends for a symbol is from before 1970, nothing is stored for it. If
+every fundamental record it sends for one of the tables is, the records already stored for the
+symbol in that table are left in place: the replacement would otherwise delete them and write
+nothing. Date columns that are not the designated timestamp (e.g. a statement's `date`) are
+stored as they are, even before 1970.
+
 ## Error handling
 
 Every error the CLI can end a run with is a subclass of `MarketHistoryDbError`
@@ -51,12 +85,12 @@ through a mapped parent) exits with `UNKNOWN_ERROR` (9).
 | 4 | `USER_INTERRUPT_ERROR` | `UserInterruptError`, `KeyboardInterrupt` | the run was interrupted (Ctrl+C) |
 | 5 | `INSERT_ERROR` | `InsertError` | writing to QuestDB failed |
 | 6 | `CONFIG_ERROR` | `ConfigError` | configuration problem, e.g. a missing or unusable environment variable |
-| 7 | `COMPATIBILITY_ERROR` | `CompatibilityError` | the provider's data no longer has the expected structure |
+| 7 | `COMPATIBILITY_ERROR` | `CompatibilityError`, `SchemaMismatchError` | the provider's data no longer has the expected structure, or no longer fits the tables |
 | 8 | `DB_ERROR` | `DbError`, `QueryError` | the DB is unreachable or a statement failed |
 | 9 | `UNKNOWN_ERROR` | any other `MarketHistoryDbError` | fallback for an error with no more specific mapping |
 | 10 | `STORAGE_ERROR` | `StorageError` | not enough free disk space |
 | 11 | `AUTH_ERROR` | `UnauthorizedError` | the API token was rejected |
-| 12 | `FETCH_ERROR` | `FetchError`, `ApiError`, `AccountError`, `RateLimitError`, `BadGatewayError` | fetching data from the provider failed |
+| 12 | `FETCH_ERROR` | `FetchError`, `NetworkError`, `NoDataError`, `ApiError`, `AccountError`, `RateLimitError`, `BadGatewayError` | fetching data from the provider failed |
 | 13 | `DATA_LIMIT_ERROR` | `DataLimitError` | the API plan's data limit has been reached |
 | 14 | `ACCESS_RIGHTS_ERROR` | `AccessRightsError` | the plan does not cover the requested endpoint |
 
@@ -69,7 +103,9 @@ MarketHistoryDbError
 ├── UserInterruptError             (4)
 ├── FetchError                     (12)
 │   ├── RequestError               (3)
+│   ├── NetworkError               (12)
 │   ├── CompatibilityError         (7)
+│   ├── NoDataError                (12)
 │   └── ApiError                   (12)
 │       ├── AccountError           (12)
 │       │   ├── UnauthorizedError  (11)
@@ -79,6 +115,7 @@ MarketHistoryDbError
 │       └── BadGatewayError        (12)
 └── DbError                        (8)
     ├── InsertError                (5)
+    │   └── SchemaMismatchError    (7)
     └── QueryError                 (8)
 ```
 

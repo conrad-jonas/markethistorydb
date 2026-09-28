@@ -3,6 +3,7 @@ from collections.abc import Callable
 import pandas as pd
 
 from markethistorydb.db                import Database, tables
+from markethistorydb.errors            import NoDataError
 from markethistorydb.fetch.eodhd       import RequestExchangeData
 from markethistorydb.fetch.write       import WriteExchangeData
 from markethistorydb.utils  import TimeFrame
@@ -30,6 +31,22 @@ class DownloadExchangeData(object):
         return df_exchanges
 
     def run(self) -> pd.Series:
+        """
+        Requests the exchange list, stores every exchange kept by the target filter and returns
+        their codes.
+
+        :return: Exchange codes of the stored exchanges
+        :raises NoDataError: If no exchange is left, either because the provider lists none of
+            the exchanges supported for the time frame or because none matches
+            target_exchange_name
+        :raises FetchError: If the exchange list could not be fetched
+        """
         df_exchanges = self._get_exchange_data()
+        if df_exchanges.empty:
+            message_exchange_not_listed = ("Exchange '{0}' is not listed for {1} data".format(
+                self.target_exchange_name, self.time_frame.name))
+            message_no_supported_exchanges = ("Provider lists none of the supported {0} exchanges".format(
+                self.time_frame.name)) 
+            raise NoDataError(message_exchange_not_listed if self.target_exchange_name else message_no_supported_exchanges)
         df_exchanges.apply(self.writeExchangeData.update_exchange_data, axis=1)
         return df_exchanges[tables.Exchange.Columns.EXCHANGE_CODE]

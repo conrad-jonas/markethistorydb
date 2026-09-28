@@ -1,5 +1,5 @@
 
-from markethistorydb.db.tables.table       import Table
+from markethistorydb.db.tables.table       import Table, TimeSeriesTable
 from markethistorydb.db.tables.exchange    import (TableExchange as Exchange,
                                    ExchangeTableType,
                                    TABLES_NAMES_EXCHANGE)
@@ -11,7 +11,7 @@ from markethistorydb.db.tables.fundamental import (TableEarningsQuarterly       
                                    TableCashFlowAnnually         as CashFlowAnnually,
                                    TableIncomeStatementQuarterly as IncomeStatementQuarterly,
                                    TableIncomeStatementAnnually  as IncomeStatementAnnually,
-                                   FundamentalTableType,
+                                   FundamentalTable,
                                    TABLE_NAMES_FUNDAMENTAL)
 from markethistorydb.db.tables.price       import (TableDailyOhlcv  as DailyOhlcv,
                                    TableMinuteOhlcv as MinuteOhlcv,

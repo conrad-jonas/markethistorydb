@@ -1,13 +1,13 @@
 #!/usr/bin/env python12.9
 
-from markethistorydb.db.tables.table import Table
+from markethistorydb.db.tables.table import TimeSeriesTable
 
 
-class TableDailyOhlcv(Table):
+class TableDailyOhlcv(TimeSeriesTable):
     """Constants for the 'daily_ohlcv' table."""
     NAME = "daily_ohlcv"
 
-    class Columns:
+    class Columns(TimeSeriesTable.Columns):
         TIMESTAMP      = "timestamp"
         EXCHANGE_CODE  = "exchange_code"
         SYMBOL_CODE    = "symbol_code"
@@ -42,11 +42,11 @@ class TableDailyOhlcv(Table):
     )
 
 
-class TableMinuteOhlcv(Table):
+class TableMinuteOhlcv(TimeSeriesTable):
     """Constants for the 'minute_ohlcv' table."""
     NAME = "minute_ohlcv"
 
-    class Columns:
+    class Columns(TimeSeriesTable.Columns):
         TIMESTAMP     = "timestamp"
         EXCHANGE_CODE = "exchange_code"
         SYMBOL_CODE   = "symbol_code"

@@ -11,4 +11,4 @@ class Database:
         self.read   = Read(self.query)
         self.update = Update(self.query)
         self.delete = Delete(self.query)
-        self.insert = Insert(config)
+        self.insert = Insert(config, self.query)

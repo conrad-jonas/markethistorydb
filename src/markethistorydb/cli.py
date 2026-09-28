@@ -9,8 +9,9 @@ from dotenv import load_dotenv
 from markethistorydb.client import Client
 from markethistorydb.errors import (AccessRightsError, AccountError, CompatibilityError,
                                     ConfigError, DataLimitError, DbError, ErrorCode, FetchError,
-                                    InsertError, MarketHistoryDbError, RequestError, StorageError,
-                                    UnauthorizedError, UserInterruptError)
+                                    InsertError, MarketHistoryDbError, RequestError,
+                                    SchemaMismatchError, StorageError, UnauthorizedError,
+                                    UserInterruptError)
 from markethistorydb.utils import SymbolStatus, TimeFrame, start_logger
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,7 @@ _ERROR_EXIT_CODES: dict[type[MarketHistoryDbError], ErrorCode] = {
     DataLimitError:      ErrorCode.DATA_LIMIT_ERROR,
     AccessRightsError:   ErrorCode.ACCESS_RIGHTS_ERROR,
     CompatibilityError:  ErrorCode.COMPATIBILITY_ERROR,
+    SchemaMismatchError: ErrorCode.COMPATIBILITY_ERROR,
     RequestError:        ErrorCode.REQUEST_ERROR,
     FetchError:          ErrorCode.FETCH_ERROR,
     InsertError:         ErrorCode.INSERT_ERROR,
@@ -116,7 +118,7 @@ def _run(args: argparse.Namespace) -> int:
     client = Client()
     if args.command == "fetch":
         _fetch(client, args)
-    elif args.command == "setup":
+    else:
         _setup(client)
     return ErrorCode.SUCCESS
 
