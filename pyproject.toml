@@ -24,10 +24,9 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "db: tests that need the database",
-    "download: tests that download data",
-    "api: tests that call the eodhd.com API",
-    "now: tests currently under development",
+    "unit: tests that fake the eodhd.com API and the database",
+    "integration: tests that run against a real QuestDB",
+    "live: tests that call the real eodhd.com API, spending calls of EODHD_API_TOKEN's account; -m 'not live' leaves them out",
 ]
 
 [build-system]
