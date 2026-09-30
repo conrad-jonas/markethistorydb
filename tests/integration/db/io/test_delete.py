@@ -30,8 +30,6 @@ def test_a_price_table_loses_the_symbol_only_and_keeps_its_indexes_and_dedup(fre
                            "timestamp": [datetime(2024, 1, 2), datetime(2024, 1, 3)]})
         if time_frame == TimeFrame.DAILY:
             df["adjusted_close"] = 1.0
-        else:
-            df["gmt_offset"] = 0
         db_insert = fresh_db.insert.ohlcv
         db_insert(df, symbol_code, exchange_code, time_frame, SymbolStatus.ACTIVE)
     wait_for_count(fresh_db, table.NAME, 6)

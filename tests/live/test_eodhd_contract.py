@@ -8,7 +8,7 @@ new shape. A failed request layer test means a fetch run would fail on the live 
 """
 
 from collections.abc import Callable, Iterable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pandas as pd
@@ -121,12 +121,12 @@ def _fundamental_records(payload: dict[str, Any], section: str, period: str | No
 def live_daily_prices() -> list[dict[str, Any]]:
     request = RequestPriceData(_DEMO_API_TOKEN, TimeFrame.DAILY, _SYMBOL)
     return request._request_list(request._get_url_for_price_data(),
-                                 request._get_url_params_for_price_data(datetime.now() - _DAILY_PERIOD, None))
+                                 request._get_url_params_for_price_data(datetime.now(UTC).replace(tzinfo=None) - _DAILY_PERIOD, None))
 
 @pytest.fixture(scope="module")
 def live_minute_prices() -> list[dict[str, Any]]:
     request = RequestPriceData(_DEMO_API_TOKEN, TimeFrame.MINUTE, _SYMBOL)
-    end_datetime = datetime.now()
+    end_datetime = datetime.now(UTC).replace(tzinfo=None)
     return request._request_list(request._get_url_for_price_data(), request._get_url_params_for_price_data(
         end_datetime - _MINUTE_PERIOD, end_datetime))
 
@@ -203,7 +203,7 @@ def test_live_daily_prices_yield_the_columns_of_their_table(routed_api, live_dai
 
 def test_live_minute_prices_yield_the_columns_of_their_table(routed_api, live_minute_prices):
     routed_api.override("/intraday/", live_minute_prices)
-    end_datetime = datetime.now()
+    end_datetime = datetime.now(UTC).replace(tzinfo=None)
     df = RequestPriceData("TOKEN", TimeFrame.MINUTE, _SYMBOL).get(end_datetime - _MINUTE_PERIOD, end_datetime)
     assert set(df.columns) == set(tables.MinuteOhlcv.ALL_COLUMNS)
 

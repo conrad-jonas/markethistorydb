@@ -1,6 +1,6 @@
 
 from collections.abc import Callable
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 import logging
 import pandas as pd
 
@@ -11,7 +11,7 @@ from markethistorydb.utils import TimeFrame, SymbolStatus
 
 logger = logging.getLogger(__name__)
 
-# Minute data gets requested from start date to end
+# Minute data gets requested from start date (midnight UTC) to end
 _START_DATE_MINUTE_DATA = "01-01-2005"
 # Minute data gets requested for the following time period in days
 _NUM_OF_DAYS_PER_MINUTE_DATA_REQUEST = 120
@@ -60,13 +60,14 @@ class DownloadPriceData(object):
         Splits the whole time period into the chunks a minute data request is allowed to cover
         (minute data requests are only allowed for a maximum of 120 days).
 
-        :param start_datetime: Start of the whole time period (_START_DATE_MINUTE_DATA if unset)
-        :return: Start and end datetime of every request, in chronological order
+        :param start_datetime: Start of the whole time period, naive and in UTC like the stored
+            timestamps (_START_DATE_MINUTE_DATA if unset)
+        :return: Start and end datetime of every request, naive and in UTC, in chronological order
         """
         # Contains the start and end datetime for each minute data request
         minute_data_time_periods: list[tuple[datetime, datetime]] = []
-        # End of the whole time period is today (evaluated per call, not at import)
-        end_datetime = datetime.combine(datetime.today().date(), datetime.min.time())
+        # End of the whole time period is the start of today in UTC, which the stored timestamps are in
+        end_datetime = datetime.combine(datetime.now(UTC).date(), datetime.min.time())
         # Start datetime of request for the chronically first time period
         if start_datetime:
             request_start_datetime = start_datetime
