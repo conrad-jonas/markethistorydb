@@ -45,8 +45,7 @@ client.fetch(TimeFrame.DAILY, exchange="USA Stocks")
 df = client.read.ohlcv({"NASDAQ": ["AAPL"]}, TimeFrame.DAILY)
 ```
 
-Nothing is read from the environment at import time; `Client()` without a config uses
-`Config.from_env()` (`EODHD_API_TOKEN`, `QUESTDB_PASSWORD`, optional `QUESTDB_HOST`, ...).
+`Client()` without a config uses `Config.from_env()` (`EODHD_API_TOKEN`, `QUESTDB_PASSWORD`, optional `QUESTDB_HOST`, ...).
 The library never configures logging; add your own handlers. Pass `should_stop=callable` to
 `client.fetch` to abort between symbols.
 
@@ -125,19 +124,69 @@ was skipped. Only errors that say nothing about the individual symbol end the ru
 a rejected token, a full disk, an interrupt, or enough symbols failing in a row that the
 fault is clearly not with the symbols.
 
+## Tests
+
+```
+uv run pytest                    # all tests, without coverage; calls the real eodhd.com API
+uv run pytest -m "not live"      # all tests but the live ones: no API calls, no network needed
+uv run pytest -m unit --cov      # unit tests only; fails below 100 % line and branch coverage
+uv run pytest -m integration     # integration tests only
+uv run pytest -m live            # contract tests against the real eodhd.com API only
+```
+
+> **API costs:** a plain `uv run pytest` includes the live tests, which spend API calls of the
+> account behind `EODHD_API_TOKEN`: one call each to `exchanges-list` and
+> `exchange-symbol-list` per run. These count against the plan's daily limit, and on a
+> pay-per-use plan they may cost money. Leave `EODHD_API_TOKEN` unset for the test run, or pass
+> `-m "not live"`, to avoid them. The other live tests use the free public `demo` token.
+
+Coverage is off unless `--cov` is passed. Its settings (source, branch coverage, the 100 %
+threshold, missing lines in the report) come from `[tool.coverage.*]` in `pyproject.toml`.
+
+`tests/unit` mirrors `src/markethistorydb`, one `test_<module>.py` per module. The eodhd.com
+API is faked with the sample payloads in `tests/data/eodhd`, so no unit test calls the real API.
+
+`tests/live` checks that eodhd.com still answers the way those samples record: same fields,
+same JSON types, and frames from the request layer that hold exactly the columns of their
+tables. Run it regularly (e.g. nightly), since the unit tests cannot notice when the provider
+changes its API. It runs by default and needs network access; `-m "not live"` leaves it out.
+eod, intraday and fundamentals are called with eodhd.com's public `demo` token. The list of
+exchanges (`exchanges-list`) and the list of an exchange's symbols (`exchange-symbol-list`) need
+`EODHD_API_TOKEN`, one call each per run (see **API costs** above). They are skipped if it is
+unset, or if eodhd.com refuses it: rejected (401), out of calls (402), or the plan not covering
+the endpoint (403). On a failure, adapt the request layer and tables to the new shape, then
+refresh the sample payload.
+
+`tests/integration` runs against a real QuestDB and **drops and recreates every table**. It
+only runs against the instance named by `QUESTDB_TEST_HOST`, `QUESTDB_TEST_PG_PORT` and
+`QUESTDB_TEST_HTTP_PORT` (plus `QUESTDB_TEST_USER`/`QUESTDB_TEST_PASSWORD`, see
+`.env.example`), is skipped while those are unset, and refuses to run if they point at the
+instance the `QUESTDB_*` variables configure. Start a second QuestDB with its own data
+directory and ports for it, e.g. with a `server.conf` holding
+`http.bind.to=127.0.0.1:19000`, `pg.net.bind.to=127.0.0.1:18812`,
+`line.tcp.net.bind.to=127.0.0.1:19009` and `http.min.net.bind.to=127.0.0.1:19003`, plus
+`line.auto.create.new.columns=false` as in production (the test for it is skipped otherwise).
+
 ## ToDo
 
-- Implement all missing tests
+- Is the check that actual eodhd.com data equals the expected data fully implemented?
+- Check if tests exists that:
+    - Check that data queried from pd.DataFrame into DB equals data queried from DB into pd.Dataframe
+    - Check for time series data that data is seamless, even if data wasn't requested in one session
 - Deploy via CI pipeline to github.com
 - Make project ready for library usage
 - Add read functionality to CLI usage (next to setup and fetch)
-- Update the four stale test modules (they import the pre-refactor layout and are skipped
-  via `collect_ignore` in `tests/conftest.py`)
 - Storage error should trigger if machine on which DB (not the client) runs into limited storage space
-- use ruff, pydantic and mypy in the CI workflow
+- use ruff, pydantic and pyright in the CI workflow (note: organize import in VS Code)
 - Move more constants into configuration
 - Implement REST API endpoints for fetch and read functionality
 - Make app cloud native ready
 - Check for performance / scalability issues
+- Check project from perspective of a data scientist
+- Track data quality in the DB, not only in the log (the log rotates, library users get none,
+  and whoever analyses the data never sees it)
+- Reuse one DB connection per run: `Insert.table` opens a new QuestDB `Sender` for every write,
+  which QuestDB flags as a "burst of reconnections" during a fetch
 - Check for security issues
+- Apply async to fetch path
 

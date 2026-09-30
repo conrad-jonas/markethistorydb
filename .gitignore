@@ -6,7 +6,10 @@ dist/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
 _test.py
 notes.txt
 uv.lock
+questdb-instances.local.md

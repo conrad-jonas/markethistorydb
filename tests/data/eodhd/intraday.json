@@ -1,0 +1,32 @@
+[
+ {
+  "timestamp": 1758700800,
+  "gmtoffset": 0,
+  "datetime": "2025-09-24 08:00:00",
+  "open": 254.3,
+  "high": 254.43,
+  "low": 253.52,
+  "close": 254.24,
+  "volume": 1364
+ },
+ {
+  "timestamp": 1758700860,
+  "gmtoffset": 0,
+  "datetime": "2025-09-24 08:01:00",
+  "open": 254.23,
+  "high": 254.42,
+  "low": 254.22,
+  "close": 254.25,
+  "volume": 1529
+ },
+ {
+  "timestamp": 1758700920,
+  "gmtoffset": 0,
+  "datetime": "2025-09-24 08:02:00",
+  "open": 254.32,
+  "high": 254.38,
+  "low": 254.2,
+  "close": 254.25,
+  "volume": 982
+ }
+]
