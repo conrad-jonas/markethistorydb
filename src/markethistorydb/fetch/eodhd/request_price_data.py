@@ -2,7 +2,7 @@
 
 """Class for requesting price data from eodhd.com"""
 
-from datetime import datetime
+from datetime import UTC, datetime
 import pandas as pd
 
 from collections.abc import Callable
@@ -28,6 +28,19 @@ class RequestPriceData(RequestData):
             url_price = Url.Address.intraday(self._symbol_code, self._exchange_url_code)
         return url_price
 
+    @staticmethod
+    def _to_unix_secs(naive_utc_datetime: datetime) -> str:
+        """
+        Converts a datetime to the Unix seconds the intraday endpoint expects.
+
+        :param naive_utc_datetime: Datetime without tzinfo, holding UTC wall clock time as the
+            provider's payloads and QuestDB do
+        :return: Unix seconds, as a string
+        """
+        # datetime.timestamp() reads a naive datetime as local time, which shifts the request by
+        # the machine's UTC offset; the provider's minute data is in UTC
+        return str(int(naive_utc_datetime.replace(tzinfo=UTC).timestamp()))
+
     def _get_url_params_for_price_data(self, start_datetime: datetime | None, end_datetime: datetime | None) -> dict[str, str]:
         url_params = {
             Url.Param.API_TOKEN: self._api_token,
@@ -42,8 +55,8 @@ class RequestPriceData(RequestData):
                     "Minute price data for {0}.{1} needs both a start and an end datetime, "
                     "got start={2}, end={3}".format(self._symbol_code, self._exchange_url_code,
                                                     start_datetime, end_datetime))
-            url_params[Url.Param.FROM] = str(int(start_datetime.timestamp()))
-            url_params[Url.Param.TO] = str(int(end_datetime.timestamp()))
+            url_params[Url.Param.FROM] = self._to_unix_secs(start_datetime)
+            url_params[Url.Param.TO] = self._to_unix_secs(end_datetime)
             url_params[Url.Param.INTERVAL] = Url.Value.INTERVAL_1M
         return url_params
 
@@ -62,7 +75,7 @@ class RequestPriceData(RequestData):
 
     def _check_price_data(self, df_price: pd.DataFrame):
         if (self._time_frame == TimeFrame.MINUTE and
-                not self._has_columns(df_price, [self._ApiColumns.TIMESTAMP, self._ApiColumns.GMT_OFFSET,
+                not self._has_columns(df_price, [self._ApiColumns.TIMESTAMP,
                                                  self._ApiColumns.DATETIME, self._ApiColumns.OPEN,
                                                  self._ApiColumns.HIGH, self._ApiColumns.LOW,
                                                  self._ApiColumns.CLOSE, self._ApiColumns.VOLUME])):
@@ -83,8 +96,9 @@ class RequestPriceData(RequestData):
         df_price.insert(0, tables.DailyOhlcv.Columns.EXCHANGE_CODE, self._exchange_code)
         df_price.insert(1, tables.DailyOhlcv.Columns.SYMBOL_CODE, self._symbol_code)
         if self._time_frame == TimeFrame.MINUTE:
-            df_price = df_price.rename(columns={self._ApiColumns.GMT_OFFSET: tables.MinuteOhlcv.Columns.GMT_OFFSET})
-            df_price = df_price.drop(self._ApiColumns.DATETIME, axis=1)
+            # The Unix seconds in TIMESTAMP are absolute, so the UTC offset of DATETIME is not needed
+            df_price = df_price.drop(columns=[self._ApiColumns.DATETIME, self._ApiColumns.GMT_OFFSET],
+                                     errors="ignore")
         else:
             df_price = df_price.rename(columns={self._ApiColumns.DATE: tables.DailyOhlcv.Columns.TIMESTAMP})
         return df_price
@@ -93,8 +107,10 @@ class RequestPriceData(RequestData):
         """
         Requests price data for symbol.
 
-        :param start_datetime: First timestamp to request (the provider's earliest if unset)
-        :param end_datetime: Last timestamp to request (the provider's latest if unset)
+        :param start_datetime: First timestamp to request, naive and in UTC (the provider's
+            earliest if unset)
+        :param end_datetime: Last timestamp to request, naive and in UTC (the provider's latest
+            if unset)
         :return: Price records of the configured time frame
         :raises ValueError: If the time frame is MINUTE and either datetime is unset, which
             the provider's intraday endpoint does not allow

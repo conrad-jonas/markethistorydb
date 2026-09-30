@@ -1,6 +1,6 @@
 """Tests for fetch/download/download_price_data.py"""
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 import math
 import pandas as pd
 import pytest
@@ -11,16 +11,18 @@ from markethistorydb.utils import SymbolStatus, TimeFrame
 from tests.fakes import FakeDb, load_payload
 
 _SYMBOL = pd.Series({"symbol_code": "AAPL", "exchange_code": "NASDAQ", "exchange_url_code": "US"})
-# "Today" for every test that depends on it
+# "Now" in UTC for every test that depends on it
 _TODAY = datetime(2025, 9, 25, 15, 30)
 
 
 class _FrozenDateTime(datetime):
-    """datetime whose today() is _TODAY"""
+    """datetime whose now() is _TODAY in UTC"""
 
     @classmethod
-    def today(cls):
-        return cls(_TODAY.year, _TODAY.month, _TODAY.day, _TODAY.hour, _TODAY.minute)
+    def now(cls, tz=None):
+        # The stored timestamps are in UTC, so the local clock must not decide what "today" is
+        assert tz is UTC, "now() asked for local time"
+        return cls.combine(_TODAY.date(), _TODAY.time(), tzinfo=UTC)
 
 
 @pytest.fixture(autouse=True)
@@ -87,11 +89,13 @@ def test_a_symbol_whose_prices_are_all_from_before_1970_is_not_stored(routed_api
 
 # --- minute --------------------------------------------------------------------------------
 
-def test_minute_prices_are_requested_from_one_minute_after_the_newest_one(routed_api):
+def test_minute_prices_are_requested_from_one_minute_after_the_newest_one(routed_api, local_time_off_utc):
+    # QuestDB hands the stored timestamps back as naive UTC; read as local time, they used to
+    # shift the request by the machine's UTC offset, leaving a gap west of Greenwich
     _downloader(_stored(datetime(2025, 9, 20, 15, 59)), TimeFrame.MINUTE).run(_SYMBOL)
     params = routed_api.params("/intraday/")
-    assert params[0]["from"] == str(int(datetime(2025, 9, 20, 16, 0).timestamp()))
-    assert params[-1]["to"] == str(int(datetime(2025, 9, 25).timestamp()))
+    assert params[0]["from"] == "1758384000"  # 2025-09-20 16:00 UTC
+    assert params[-1]["to"] == "1758758400"   # 2025-09-25 00:00 UTC
 
 def test_the_minute_chunks_are_merged_into_one_frame_with_a_fresh_index(routed_api):
     db = _stored(None)

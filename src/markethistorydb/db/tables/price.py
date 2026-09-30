@@ -50,7 +50,6 @@ class TableMinuteOhlcv(TimeSeriesTable):
         TIMESTAMP     = "timestamp"
         EXCHANGE_CODE = "exchange_code"
         SYMBOL_CODE   = "symbol_code"
-        GMT_OFFSET    = "gmt_offset"
         OPEN          = "open"
         HIGH          = "high"
         LOW           = "low"
@@ -72,7 +71,6 @@ class TableMinuteOhlcv(TimeSeriesTable):
         Columns.TIMESTAMP,
         Columns.EXCHANGE_CODE,
         Columns.SYMBOL_CODE,
-        Columns.GMT_OFFSET,
         Columns.OPEN,
         Columns.HIGH,
         Columns.LOW,

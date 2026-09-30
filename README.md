@@ -69,6 +69,31 @@ symbol in that table are left in place: the replacement would otherwise delete t
 nothing. Date columns that are not the designated timestamp (e.g. a statement's `date`) are
 stored as they are, even before 1970.
 
+## Timestamp conventions
+
+All internal datetimes are naive (no timezone info) and hold UTC wall-clock time: the same UTC
+that eodhd.com sends in minute data and that QuestDB stores for a designated timestamp. When you
+pass a datetime to the library or build one from the stored data, treat it as UTC. This matters
+most when requesting minute data programmatically.
+
+- **Minute data**: request bounds are sent as Unix seconds, converted with
+  `dt.replace(tzinfo=UTC).timestamp()`. A bare `dt.timestamp()` would read the naive datetime as
+  local time and shift the range by the machine's UTC offset.
+- **Daily data**: requests use plain trading dates (`YYYY-MM-DD`), and each bar is stored at
+  midnight UTC of its trading date.
+
+To convert between local time and the stored naive UTC:
+
+```python
+from datetime import UTC
+from zoneinfo import ZoneInfo
+
+# Local -> stored
+utc_naive = local_dt.astimezone(UTC).replace(tzinfo=None)
+# Stored -> local
+ny_time = stored_ts.replace(tzinfo=UTC).astimezone(ZoneInfo("America/New_York"))
+```
+
 ## Error handling
 
 Every error the CLI can end a run with is a subclass of `MarketHistoryDbError`

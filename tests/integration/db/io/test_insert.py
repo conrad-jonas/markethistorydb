@@ -59,13 +59,13 @@ def test_a_lookup_record_is_visible_to_the_very_next_read(fresh_db):
         assert not fresh_db.read.sector(symbol_code, "US").empty, i
 
 def test_minute_prices_round_trip(fresh_db):
-    df = pd.DataFrame({"exchange_code": "NASDAQ", "symbol_code": "AAPL", "gmt_offset": 0,
+    df = pd.DataFrame({"exchange_code": "NASDAQ", "symbol_code": "AAPL",
                        "open": 1.0, "high": 2.0, "low": 0.5, "close": [1.5, 1.6], "volume": 10.0,
                        "timestamp": [datetime(2024, 1, 2, 9, 30), datetime(2024, 1, 2, 9, 31)]})
     fresh_db.insert.ohlcv(df, "AAPL", "NASDAQ", TimeFrame.MINUTE, SymbolStatus.ACTIVE)
     wait_for_count(fresh_db, "minute_ohlcv", 2)
     assert _column_types(fresh_db, "minute_ohlcv") == {
-        "timestamp": "TIMESTAMP", "exchange_code": "SYMBOL", "symbol_code": "SYMBOL", "gmt_offset": "BYTE",
+        "timestamp": "TIMESTAMP", "exchange_code": "SYMBOL", "symbol_code": "SYMBOL",
         "open": "DOUBLE", "high": "DOUBLE", "low": "DOUBLE", "close": "DOUBLE", "volume": "DOUBLE"}
 
 def test_prices_sent_twice_are_stored_once(fresh_db):
@@ -84,7 +84,7 @@ def test_prices_sent_twice_are_stored_once(fresh_db):
 def test_a_long_minute_history_is_written_in_one_batch(fresh_db):
     # 100 000 minutes, a little over two months of one symbol at the full 24 h a day
     num_of_minutes = 100_000
-    df = pd.DataFrame({"exchange_code": "NASDAQ", "symbol_code": "AAPL", "gmt_offset": 0, "open": 1.0,
+    df = pd.DataFrame({"exchange_code": "NASDAQ", "symbol_code": "AAPL", "open": 1.0,
                        "high": 2.0, "low": 0.5, "close": 1.5, "volume": 100.0,
                        "timestamp": pd.date_range("2024-01-01", periods=num_of_minutes, freq="min")})
     fresh_db.insert.ohlcv(df, "AAPL", "NASDAQ", TimeFrame.MINUTE, SymbolStatus.ACTIVE)

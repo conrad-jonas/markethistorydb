@@ -33,7 +33,7 @@ def _daily_row(symbol_code: str, day: int) -> tuple:
     return (datetime(2024, 1, day), "NASDAQ", symbol_code, 1.0, 2.0, 0.5, 1.5, 1.4, 100)
 
 def _minute_row(symbol_code: str, minute: int) -> tuple:
-    return (datetime(2024, 1, 2, 9, minute), "NASDAQ", symbol_code, 0, 1.0, 2.0, 0.5, 1.5, 100.0)
+    return (datetime(2024, 1, 2, 9, minute), "NASDAQ", symbol_code, 1.0, 2.0, 0.5, 1.5, 100.0)
 
 
 def test_a_symbol_is_looked_up_by_its_whole_unique_key():
@@ -68,7 +68,7 @@ def test_minute_prices_are_read_from_the_minute_table_with_its_columns():
     query = RecordingQuery([_minute_row("AAPL", 30)])
     df = Read(query).ohlcv({"NASDAQ": ["AAPL"]}, TimeFrame.MINUTE)
     assert "FROM minute_ohlcv" in query.texts[0]
-    assert "gmt_offset" in df.columns
+    assert list(df.columns) == ["exchange_code", "open", "high", "low", "close", "volume"]
     # Without bounds, the whole history is selected
     assert query.statements[0][1][1:] == [datetime.min, datetime.max]
 

@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS minute_ohlcv (
     timestamp       TIMESTAMP,
     exchange_code   SYMBOL CAPACITY 6,
     symbol_code     SYMBOL CAPACITY 40000,
-    gmt_offset      BYTE,
     open            DOUBLE,
     high            DOUBLE,
     low             DOUBLE,
