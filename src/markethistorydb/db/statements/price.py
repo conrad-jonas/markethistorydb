@@ -43,7 +43,7 @@ class StatementsPrice:
     # Each element is a separate statement (QuestDB executes one statement per query). The
     # indexes are added once the copy has taken the original's name, since CREATE TABLE AS does
     # not carry them over and the original is dropped.
-    DROP_SYMBOL_FROM_DAILY_OHLCV = (
+    DROP_SYMBOL_FROM_DAILY_OHLCV: tuple[str, ...] = (
         f"CREATE TABLE {_DAILY_TABLE}_copy AS ("
         f"SELECT * FROM {_DAILY_TABLE} WHERE NOT ({_DAILY_SYMBOL_CODE} = %s AND {_DAILY_EXCHANGE_CODE} = %s)"
         f") TIMESTAMP({_DAILY_TIMESTAMP}) PARTITION BY YEAR WAL "
@@ -52,7 +52,7 @@ class StatementsPrice:
         f"RENAME TABLE {_DAILY_TABLE}_copy TO {_DAILY_TABLE};",
         f"ALTER TABLE {_DAILY_TABLE} ALTER COLUMN {_DAILY_EXCHANGE_CODE} ADD INDEX;",
         f"ALTER TABLE {_DAILY_TABLE} ALTER COLUMN {_DAILY_SYMBOL_CODE} ADD INDEX;")
-    DROP_SYMBOL_FROM_MINUTE_OHLCV = (
+    DROP_SYMBOL_FROM_MINUTE_OHLCV: tuple[str, ...] = (
         f"CREATE TABLE {_MINUTE_TABLE}_copy AS ("
         f"SELECT * FROM {_MINUTE_TABLE} WHERE NOT ({_MINUTE_SYMBOL_CODE} = %s AND {_MINUTE_EXCHANGE_CODE} = %s)"
         f") TIMESTAMP({_MINUTE_TIMESTAMP}) PARTITION BY DAY WAL "

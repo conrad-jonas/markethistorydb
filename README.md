@@ -207,6 +207,7 @@ directory and ports for it, e.g. with a `server.conf` holding
 - Implement REST API endpoints for fetch and read functionality
 - Make app cloud native ready
 - Check for performance / scalability issues
+- Keep stored `adjusted_close` current after dividends and splits, and write price data in time order
 - Check project from perspective of a data scientist
 - Track data quality in the DB, not only in the log (the log rotates, library users get none,
   and whoever analyses the data never sees it)

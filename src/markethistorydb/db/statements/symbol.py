@@ -50,7 +50,7 @@ class StatementsSymbol:
 
     # Each element is a separate statement (QuestDB executes one statement per query); {table_name_copy}
     # is a distinct placeholder from {table_name} so sql.Identifier() quoting isn't glued to literal "_copy" text.
-    DROP_SYMBOL_FROM_TABLE = (
+    DROP_SYMBOL_FROM_TABLE: tuple[str, ...] = (
         "CREATE TABLE {table_name_copy} AS (SELECT * FROM {table_name} WHERE NOT (symbol_code = %s AND exchange_code = %s));",
         "DROP TABLE {table_name};",
         "RENAME TABLE {table_name_copy} TO {table_name};")
