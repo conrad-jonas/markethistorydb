@@ -77,6 +77,15 @@ def test_a_minute_payload_without_gmtoffset_is_accepted(routed_api):
     df = _requester(TimeFrame.MINUTE).get(datetime(2024, 1, 2), datetime(2024, 5, 1))
     assert set(df.columns) == set(tables.MinuteOhlcv.ALL_COLUMNS)
 
+@pytest.mark.parametrize("column", ["timestamp", "datetime", "close", "volume"])
+def test_a_minute_payload_without_a_required_field_is_a_compatibility_error(routed_api, column):
+    rows = load_payload("intraday")
+    for row in rows:
+        del row[column]
+    routed_api.override("/intraday/", rows)
+    with pytest.raises(CompatibilityError):
+        _requester(TimeFrame.MINUTE).get(datetime(2024, 1, 2), datetime(2024, 5, 1))
+
 
 # --- no data -------------------------------------------------------------------------------
 
