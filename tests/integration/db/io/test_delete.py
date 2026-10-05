@@ -58,13 +58,49 @@ def test_a_symbol_table_loses_the_symbol_only(fresh_db, table):
     getattr(fresh_db.insert, table.NAME)(record)
     assert _remaining(fresh_db, table.NAME) == sorted([_TARGET] + _NEIGHBOURS)
 
-def test_a_fundamental_table_loses_the_symbol_only(fresh_db):
+def _insert_earnings(db) -> type[tables.EarningsAnnually]:
+    """
+    Writes one annual earnings record for the target and for each of its neighbours.
+
+    :param db: Database to write to
+    :return: The earnings table the records went to
+    """
     table = tables.EarningsAnnually
     df = pd.DataFrame({"symbol_code": [code for code, _ in [_TARGET] + _NEIGHBOURS],
                        "exchange_code": [exchange for _, exchange in [_TARGET] + _NEIGHBOURS],
                        "date": datetime(2024, 12, 31), "eps_actual": 1.0})
-    fresh_db.insert.table(df, table.NAME, table.TIMESTAMP_COLUMN)
-    wait_for_count(fresh_db, table.NAME, 3)
+    db.insert.table(df, table.NAME, table.TIMESTAMP_COLUMN)
+    wait_for_count(db, table.NAME, 3)
+    return table
+
+def _leave_copy_behind(db, table):
+    """
+    Creates the copy a deletion makes first, as if that deletion had been interrupted right after.
+
+    :param db: Database the table lives in
+    :param table: Table to copy, with every record
+    """
+    select(db, "CREATE TABLE {0}_copy AS (SELECT * FROM {0}) TIMESTAMP({1}) PARTITION BY YEAR WAL".format(
+        table.NAME, table.TIMESTAMP_COLUMN))
+
+def test_a_fundamental_table_loses_the_symbol_only(fresh_db):
+    table = _insert_earnings(fresh_db)
+    _delete(fresh_db, table)
+    assert _remaining(fresh_db, table.NAME) == sorted(_NEIGHBOURS)
+    assert count(fresh_db, "tables() WHERE table_name = 'earnings_annually_copy'") == 0
+
+def test_a_copy_left_next_to_the_table_does_not_block_the_deletion(fresh_db):
+    table = _insert_earnings(fresh_db)
+    _leave_copy_behind(fresh_db, table)
+    _delete(fresh_db, table)
+    assert _remaining(fresh_db, table.NAME) == sorted(_NEIGHBOURS)
+    assert count(fresh_db, "tables() WHERE table_name = 'earnings_annually_copy'") == 0
+
+def test_a_copy_left_without_the_table_takes_its_place_with_every_record(fresh_db):
+    # Interrupted between dropping the table and renaming the copy: the copy holds the only records
+    table = _insert_earnings(fresh_db)
+    _leave_copy_behind(fresh_db, table)
+    select(fresh_db, "DROP TABLE {0}".format(table.NAME))
     _delete(fresh_db, table)
     assert _remaining(fresh_db, table.NAME) == sorted(_NEIGHBOURS)
     assert count(fresh_db, "tables() WHERE table_name = 'earnings_annually_copy'") == 0
