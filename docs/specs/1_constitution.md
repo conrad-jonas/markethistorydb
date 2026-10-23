@@ -206,9 +206,11 @@ States of a planned feature:
 1. **`1_specs.md` into `3_specs.md`:**
    - ADDED items are appended to their capability chapter (a new chapter for a new capability);
    - MODIFIED items replace the text, keeping the ID;
-   - REMOVED items are deleted.
+   - REMOVED items are deleted;
+   - the rows of "Known gaps" the feature closes are removed.
 2. **`2_design.md` into `4_design.md`:** changed sections are replaced, a new capability gets a
-   new chapter, and decision outcomes go to "Design decisions in force".
+   new chapter, decision outcomes go to "Design decisions in force", and the rows of "Known
+   limitations" the feature removes are deleted.
 3. **`3_test.md` into `5_test.md`,** in the same way. Status becomes Implemented, with
    "Implemented by" naming the tests.
 4. **Archive:** move the folder to `archive/<yyyy-mm-dd>-<feature>/`.
