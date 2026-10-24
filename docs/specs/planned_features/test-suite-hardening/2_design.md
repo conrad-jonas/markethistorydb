@@ -138,9 +138,9 @@ A fake provider for the tests of PRICES-S09, in `tests/fakes.py`, built on `Fake
   UTC of every day (23:58 to 00:02), so that every window boundary, which falls on 00:00 UTC
   (PRICES-S03), has bars on both sides and on the boundary itself.
 - It answers `/eod/<symbol>` with the daily bars from the request's `from` on, and
-  `/intraday/<symbol>` with the minute bars between `from` and `to`, both inclusive (open
-  question 1); only bars before the pinned "now" exist. The other endpoints answer with the
-  sample payloads, as in `FakeRoutedApi`.
+  `/intraday/<symbol>` with the minute bars between `from` and `to`, both inclusive, as
+  eodhd's are (PROVIDER-S23); only bars before the pinned "now" exist. The other endpoints
+  answer with the sample payloads, as in `FakeRoutedApi`.
 - The series start some 130 days before "now", so a symbol's history crosses a window boundary
   while most of the windows from 2005 come back empty.
 - A test can make a chosen request fail, e.g. "the third intraday request for MSFT", with a
@@ -310,10 +310,9 @@ merges it into the global files (`1_constitution.md` 6.4).
 
 ## 8 Open questions
 
-1. **Bounds of the intraday endpoint:** whether eodhd's `to` is inclusive. `FakeSeriesApi` treats
-   both bounds as inclusive, the case in which neighbouring windows share their boundary bar;
-   the stored series is the same either way (PRICES-S06). A live check of the bounds belongs to
-   `data-integrity-checks` (value semantics).
+1. **Bounds of the intraday endpoint:** answered on 2026-10-23: eodhd includes both bounds, so
+   neighbouring windows share their boundary bar, which is stored once (PRICES-S06).
+   `data-integrity-checks` checks it every night (PROVIDER-S23, PROVIDER-T27).
 2. **Warnings of the container fixture:** whether testcontainers or the Docker client raises
    warnings (e.g. `DeprecationWarning`) while the container of CI-S11 starts. Each becomes an
    exception of QUALITY-S07 or is avoided; checked in issue 1.
