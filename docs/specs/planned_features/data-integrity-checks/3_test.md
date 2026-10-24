@@ -36,8 +36,12 @@ test whose counts are its assertions.
 
 ## Tests changed without a change of their test case
 
-None. The tests of STORAGE-T04 and STORAGE-T05 compare the created tables and the schema files
-with the table constants, so they follow the new keys without a change.
+| Test | Test case | Change |
+| ---- | --------- | ------ |
+| `integration/setup/test_main.py`: `test_every_table_is_created_as_its_constants_describe_it` | STORAGE-T04 | compares the deduplication keys as well (`upsertKey` of `table_columns()`), as its test case says; today it compares only the columns, the designated timestamp and WAL |
+
+The unit tests of STORAGE-T05 compare the schema files with the table constants, so they
+follow the new keys without a change.
 
 ## Changes to `5_test.md` section 1 on merge
 
