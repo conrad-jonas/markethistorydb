@@ -9,9 +9,10 @@ The behaviour implemented today, one chapter per capability. Planned changes are
   (`2_requirements.md`).
 - **How it is built** is described in `4_design.md`; **how it is tested**, in `5_test.md`.
 - **Known gaps:** each chapter ends with the places where today's behaviour falls short of a
-  requirement, and the planned feature that closes each gap. Structural shortcomings of the
-  design that no requirement covers (testability, coupling, duplication) are listed in
-  `4_design.md` as known limitations, never here.
+  requirement, and the planned feature that closes each gap. A gap is listed once, in the
+  chapter of the specification item that its planned feature changes; other chapters don't
+  repeat it. Structural shortcomings of the design that no requirement covers (testability,
+  coupling, duplication) are listed in `4_design.md` as known limitations, never here.
 - **Terms:** code names are used where they help to find the code, e.g. *symbol* for what the
   glossary calls an instrument, and the provider's *exchange code* for an exchange.
 
@@ -160,13 +161,10 @@ The behaviour implemented today, one chapter per capability. Planned changes are
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
 | The contract checks cover fields and types, not value semantics (e.g. whether open, high, low and close are split-adjusted), and they don't run on a schedule | COR-17 | `data-integrity-checks`, `continuous-integration` |
-| Live checks run by default and spend the account's calls | QA-6 | `test-suite-hardening` |
 | Requests only react to rate limiting (429); there is no planning against the provider's per-minute and daily limits | ING-9 | `ingestion-scale` |
-| Requests run one at a time | ING-17 | `ingestion-scale` |
 | A new HTTP connection per request (no shared session) | OPS-2 | `code-hygiene` |
 | Provider specifics (codes, field names, the virtual exchange `US`) are spread over the request classes and reach the stored data | PRV-1, PRV-3 | `provider-interface` |
 | Fields the provider adds pass the structure check and only fail at the write, and only if the server setting is right (STORAGE-S13) | PRV-6 | `provider-interface` |
-| The masking misses the URL-encoded and the upper-case form of the token parameter (LOGGING) | QA-8 | `secret-redaction-hardening` |
 | Splits and dividends are not requested | BT-7 | `corporate-actions` |
 
 ---
@@ -283,13 +281,11 @@ specified in REFDATA (REFDATA-S08).
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
 | A revised value replaces the earlier one; nothing records when a value became known, so fundamentals can't be read as known on a past date | BT-8, BT-9 | `point-in-time-fundamentals` |
-| Two periods filed on the same day collapse into one record (STORAGE-S06) | COR-1 | `data-integrity-checks`, `point-in-time-fundamentals` |
 | Replacement is delete-then-write per table: a failed write leaves the table without the symbol's records; a suspected race between the delete and pending writes (STORAGE, section 1.7) | COR-1, COR-2 | `data-integrity-checks`, `point-in-time-fundamentals` |
 | The full history is requested in every pass the symbol takes part in, so a NASDAQ or NYSE stock in both the daily and the minute data gets its fundamentals twice per status | ING-7, ING-8 | `ingestion-efficiency` |
 | Fundamentals only for `NASDAQ` and `NYSE`, fixed in the code | MKT-9, OPS-3 | `settings-model` |
 | Records the provider withdraws stay stored only until the next replacement, without any trace | COR-13, BT-9 | `point-in-time-fundamentals` |
 | Fields are stored under eodhd's names in fixed tables; a new field fails the symbol | PRV-5, PRV-6 | `provider-interface`, `point-in-time-fundamentals` |
-| Fundamentals can't be read (no read function) | MKT-14 | `query-layer` |
 
 ---
 
@@ -331,7 +327,6 @@ reference data (REFDATA), then works through its symbols: prices (PRICES), then 
 
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
-| Ctrl+C on the command line raises `KeyboardInterrupt` wherever the run is, e.g. between deleting and writing a symbol's fundamentals (FUND-S07); the stop points of RUNS-S08 are used by the library only | ING-3 | `library-contract` |
 | An error that ends one pass skips the later passes, even when they could succeed: `fetch --exchange "London Exchange"` runs both daily passes, then fails in the first minute pass with `NoDataError`, since London isn't a minute exchange | ING-15, ING-4 | `ingestion-efficiency` |
 | A failed exchange or symbol list (after its retries) ends the fetch, not just that exchange | ING-4 | `ingestion-efficiency` |
 | The outcome is a log and a count; failed symbols aren't returned to the caller, and "downloaded" doesn't tell stored from up to date | LIB-9, ING-6 | `library-contract` |
@@ -413,10 +408,9 @@ look up stored records (REFDATA, PRICES).
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
 | No `__all__`, no `__version__`, no `py.typed` marker | LIB-5, LIB-7, LIB-10 | `library-contract` |
-| `Client.setup()` always drops every table; no safe "create what is missing" | COR-3, OPS-1 | `library-contract` |
 | No `close()` and no context manager; a client holds nothing to release only because every operation opens its own connections | LIB-8, OPS-2 | `library-contract`, `connection-reuse` |
 | `fetch` returns a count, not an outcome the caller can act on | LIB-9 | `library-contract` |
-| `Client.__init__` and most `Read` methods have no docstrings | LIB-6 | `library-contract` |
+| `Client.__init__` has no docstring (the `Read` methods: ACCESS, section 7.4) | LIB-6 | `library-contract` |
 | The public API isn't checked by a type checker | LIB-7 | `library-contract` |
 
 ---
@@ -467,7 +461,7 @@ look up stored records (REFDATA, PRICES).
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
 | `setup` can only be confirmed interactively; no `--yes`, and a declined setup ends with code 0, so a script can't tell it from success | CMD-2, COR-3 | `library-contract` |
-| Ctrl+C raises `KeyboardInterrupt` wherever the run is, instead of using the stop function (RUNS, section 6.4) | ING-3 | `library-contract` |
+| Ctrl+C on the command line raises `KeyboardInterrupt` wherever the run is, e.g. between deleting and writing a symbol's fundamentals (FUND-S07), instead of using the stop function; the stop points of RUNS-S08 are used by the library only | ING-3 | `library-contract` |
 | `.env` is found only above the installed package's directory: after `pip install .` into an environment outside the project folder, the `.env` in the working directory is not read | OPS-3, DIST-1 | `publishing-readiness` |
 | No commands to inspect or export stored data | CMD-3, CMD-4 | `query-layer` |
 | `--exchange` takes the exchange's name in eodhd's list (e.g. `"USA Stocks"`), and only one | ING-15, PRV-1 | `settings-model`, `provider-interface` |
