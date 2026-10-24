@@ -191,28 +191,3 @@ directory and ports for it, e.g. with a `server.conf` holding
 `http.bind.to=127.0.0.1:19000`, `pg.net.bind.to=127.0.0.1:18812`,
 `line.tcp.net.bind.to=127.0.0.1:19009` and `http.min.net.bind.to=127.0.0.1:19003`, plus
 `line.auto.create.new.columns=false` as in production (the test for it is skipped otherwise).
-
-## ToDo
-
-- Is the check that actual eodhd.com data equals the expected data fully implemented?
-- Check if tests exists that:
-    - Check that data queried from pd.DataFrame into DB equals data queried from DB into pd.Dataframe
-    - Check for time series data that data is seamless, even if data wasn't requested in one session
-- Deploy via CI pipeline to github.com
-- Make project ready for library usage
-- Add read functionality to CLI usage (next to setup and fetch)
-- Storage error should trigger if machine on which DB (not the client) runs into limited storage space
-- use ruff, pydantic and pyright in the CI workflow (note: organize import in VS Code)
-- Move more constants into configuration
-- Implement REST API endpoints for fetch and read functionality
-- Make app cloud native ready
-- Check for performance / scalability issues
-- Keep stored `adjusted_close` current after dividends and splits, and write price data in time order
-- Check project from perspective of a data scientist
-- Track data quality in the DB, not only in the log (the log rotates, library users get none,
-  and whoever analyses the data never sees it)
-- Reuse one DB connection per run: `Insert.table` opens a new QuestDB `Sender` for every write,
-  which QuestDB flags as a "burst of reconnections" during a fetch
-- Check for security issues
-- Apply async to fetch path
-

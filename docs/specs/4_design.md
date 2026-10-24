@@ -1009,7 +1009,7 @@ which is replaced by `***`.
 | ---- | ------- |
 | `pyproject.toml` | `[project]` name, version, description, readme, `requires-python`, dependencies; `[project.scripts]`; the dev dependency group; pytest markers; coverage settings (branch coverage of `src`, `fail_under = 100`); `[build-system]` `uv_build` |
 | `src/markethistorydb/` | the package (src layout) |
-| `README.md` | install, QuestDB settings, CLI and library usage, conventions, errors and exit codes, tests, ToDo |
+| `README.md` | install, QuestDB settings, CLI and library usage, conventions, errors and exit codes, tests |
 | `.env.example` | the environment variables (chapter CONFIG) |
 | `uv.lock` | resolved versions; ignored by git |
 
