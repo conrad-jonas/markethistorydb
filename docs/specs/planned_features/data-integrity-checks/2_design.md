@@ -131,12 +131,15 @@ passes today, and shows that the loss is down to the pending write alone.
     e.g. by a late filer, would collapse just like two filed on one day. It has the period end
     (`date`), so it gets the same fix.
   - Annual earnings is already keyed by its period end, one record per year.
-- **Nothing else changes:**
+- **Nothing else changes in the code:**
   - the deletion creates its copy with the keys of the table constants (STORAGE-S19), so it
     keeps the new keys;
-  - the unit tests of STORAGE-T05 compare the schema files with the constants, and the
-    integration test of STORAGE-T04 compares the created tables with them;
+  - the unit tests of STORAGE-T05 compare the schema files with the constants;
   - an amended filing with a new filing date stays a record of its own, as today.
+- **The test of STORAGE-T04** is extended to compare the created tables' deduplication keys
+  with the constants (`upsertKey` of `table_columns()`). Its test case names the keys, but the
+  test compares only the columns, the designated timestamp and WAL (found on 2026-10-24 while
+  `code-hygiene` was written).
 - **Existing databases:** none holds data worth keeping (2026-10-23). `setup` creates the tables
   with the new keys; no migration.
   - Checked on 2026-10-23 for completeness: `ALTER TABLE … DEDUP ENABLE UPSERT KEYS(…)` changes
@@ -283,7 +286,7 @@ The decisions are recorded in `6_roadmap.md` in stage 4.
 
 | # | Issue | Covers |
 | - | ----- | ------ |
-| 1 | The keys of the seven tables; the test of two periods reported or filed on one day; STORAGE-T10's test updated | STORAGE-S06, T10, T37 |
+| 1 | The keys of the seven tables; the test of two periods reported or filed on one day; STORAGE-T10's test updated | STORAGE-S06, T04, T10, T37 |
 | 2 | The race: FUND-T12's two tests, one marked as a strict expected failure | STORAGE-S19, FUND-T12 |
 | 3 | The live checks of value semantics | PROVIDER-S23, T26, T27 |
 | 4 | The performance baseline: spies, `baseline.json`, the summary hook; the merge into the global files | QUALITY-S10, T10 |
