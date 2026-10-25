@@ -137,7 +137,8 @@ src/markethistorydb/
 ### 5.3 Git workflow
 
 - `main` only receives merges: every change is made on a branch named `feature/…`, `fix/…`,
-  `test/…`, `refactor/…` or `chore/…` and merged with `git merge --no-ff`.
+  `test/…`, `refactor/…`, `chore/…` or, for the specification documents, `docs/…`, and merged
+  with `git merge --no-ff`.
 - Once the repository is on GitHub, every branch is merged through a pull request, and each
   pull request implements one GitHub issue.
 - `CLAUDE.md` and `.claude/` stay untracked (`.git/info/exclude`).
