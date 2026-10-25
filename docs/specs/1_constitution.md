@@ -174,7 +174,8 @@ src/markethistorydb/
 - **The design** describes how the specification is realised: structure, data model, algorithms,
   and the options considered with the reasons for the choice.
 - **A test case** describes a check in given/when/then form. It names the specification items it
-  verifies, its level (unit, integration, live, performance) and the tests that implement it.
+  verifies, its level (unit, integration, live, static, suite or ci) and the tests that implement
+  it.
 
 **Completeness.** Every requirement is satisfied by at least one specification item, implemented
 or planned. Every specification item satisfies at least one requirement. Every implemented
