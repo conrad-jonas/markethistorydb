@@ -214,7 +214,8 @@ States of a planned feature:
    - ADDED items are appended to their capability chapter (a new chapter for a new capability);
    - MODIFIED items replace the text, keeping the ID;
    - REMOVED items are deleted;
-   - the rows of "Known gaps" the feature closes are removed.
+   - the rows of "Known gaps" the feature closes are removed, and the rows it changes or adds are
+     applied.
 2. **`2_design.md` into `4_design.md`:** changed sections are replaced, a new capability gets a
    new chapter, decision outcomes go to "Design decisions in force", and the rows of "Known
    limitations" the feature removes are deleted.
@@ -262,11 +263,52 @@ it by hand. It shows:
   - duplicate or dangling IDs;
   - requirements whose status in `2_requirements.md` differs from the one the known gaps give
     (section 6.2);
-- **the next free ID** per capability.
+- **the next free ID** per capability;
+- **per planned feature:** the known gaps it closes, and the status of each requirement after its
+  merge, with the features before it merged first.
 
-Once the documents are tracked in git, the script becomes `scripts/trace.py` and CI runs it with
+The planned feature `traceability` brings the script as `scripts/trace.py`, which CI runs with
 `--check`. Tests then carry `@pytest.mark.spec("<ID>")`, so code and test cases link
 automatically.
+
+### 6.7 Files of a planned feature
+
+Each fact is stated once, in the file where it belongs. What the trace script derives (section
+6.6) is not written by hand.
+
+**`1_specs.md`:**
+
+- **Header line:** state, milestone, kind (a new capability, or a change to existing ones), the
+  requirements whose status the feature changes, and the features it depends on.
+- **Why:** the problem the feature solves, in a few lines.
+- **Specification changes:** tables `Change | ID | Specification | Satisfies`, grouped by topic.
+  ADDED and MODIFIED items carry their full text, REMOVED items their ID.
+- **Known gaps changed** and **Known gaps added:** the rows of `3_specs.md` the feature changes
+  or adds, if any. The rows it closes are not listed (section 6.6).
+- **Not done:** a table `Item | Where | Why` of what the feature leaves out. *Where* is another
+  feature, or "nowhere: dropped" with the reason.
+
+**`2_design.md`:**
+
+- **Overview:** the parts of the change and the files each touches.
+- **Design per part:** what an implementer can't take from the specification or the code, kept
+  short.
+- **Decisions:** a table `Decision | Choice | Options considered | Reason`, the only place a
+  decision is recorded. A measurement that supports a decision appears there as a one-line
+  conclusion.
+- **Implementation:** the GitHub issues, one branch and pull request each, with the IDs each
+  covers and their order.
+- **Open questions.**
+- **Changes to `4_design.md` on merge:** the numbers of the sections that change, and the rows of
+  "Known limitations" the feature removes.
+
+**`3_test.md`:** tables `Change | ID | Test case | Verifies | Level | Status | Implemented by`,
+grouped as in `1_specs.md`. An ADDED test case is Missing. A MODIFIED one is Missing if its tests
+must be added or changed, and Implemented if they stay as they are. "Implemented by" names the
+tests once they exist, and is "—" before.
+
+**Across features:** a MODIFIED item builds on the text of the features before it in roadmap
+order. A feature may correct the files of a Ready feature, in a commit of its own.
 
 ---
 
