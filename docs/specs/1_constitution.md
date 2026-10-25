@@ -167,10 +167,15 @@ src/markethistorydb/
   - It is solution-neutral: no tables, functions, libraries or formats, unless the choice itself
     is the owner's decision (REST, PyPI, MIT, QuestDB).
   - It is atomic and verifiable, and phrased as "The system shall …".
-  - Its status follows from its specification items: **Done** if all of them are in
-    `3_specs.md`, **Partial** if some are, **Open** if none are.
+  - Its status follows from `3_specs.md`: **Open** if no specification item there satisfies it;
+    **Partial** if one does and a known gap cites it; **Done** if one does and no known gap
+    cites it. Planned items don't change the status before they are merged.
 - **A specification item** states concrete, observable behaviour: interfaces, inputs and outputs,
   rules, limits, errors, stored data. It names the requirements it satisfies.
+- **A known gap** (`3_specs.md`, at the end of each chapter) is a place where the implemented
+  behaviour falls short of a requirement. It names the requirements it falls short of and
+  exactly one planned feature that closes it. A shortfall that several features close is split
+  into one gap per feature, each describing its own part.
 - **The design** describes how the specification is realised: structure, data model, algorithms,
   and the options considered with the reasons for the choice.
 - **A test case** describes a check in given/when/then form. It names the specification items it
@@ -255,6 +260,8 @@ it by hand. It shows:
   - implemented specification items without an implemented test case;
   - MODIFIED or REMOVED items pointing to a non-existent ID;
   - duplicate or dangling IDs;
+  - requirements whose status in `2_requirements.md` differs from the one the known gaps give
+    (section 6.2);
 - **the next free ID** per capability.
 
 Once the documents are tracked in git, the script becomes `scripts/trace.py` and CI runs it with
