@@ -154,7 +154,7 @@ src/markethistorydb/
 | `3_specs.md` | status quo: the specification of everything implemented, one chapter per capability |
 | `4_design.md` | status quo: how the implemented system is built, and the design decisions in force |
 | `5_test.md` | status quo: test approach and test cases, each Implemented or Missing |
-| `6_roadmap.md` | milestones and the order of the planned features; settled decisions and decision gates |
+| `6_roadmap.md` | milestones and the order of the planned features, with a row for each feature not yet written (scope, requirements, dependencies); decision gates, and the settled decisions that no other document records |
 | `7_traceability.md` | generated: requirement → specification → test, plus gap lists |
 | `planned_features/<feature>/1_specs.md` | the specification changes of a planned feature |
 | `planned_features/<feature>/2_design.md` | the design of that change: target design, options, decision, notes |
@@ -183,26 +183,35 @@ src/markethistorydb/
   it.
 
 **Completeness.** Every requirement is satisfied by at least one specification item, implemented
-or planned. Every specification item satisfies at least one requirement. Every implemented
-specification item is verified by at least one test case.
+or planned, or is assigned to a planned feature not yet written (`6_roadmap.md`). Every
+specification item satisfies at least one requirement. Every implemented specification item is
+verified by at least one test case.
 
 ### 6.3 Workflow
 
 1. **New need:** add or change requirements in `2_requirements.md`.
-2. **Plan:** create `planned_features/<feature>/` with `1_specs.md`, `2_design.md` and
-   `3_test.md`. Name it after the capability it introduces (e.g. `rest-api`), or after the change
-   if it only changes existing capabilities (e.g. `chunked-minute-writes`). Enter it in
-   `6_roadmap.md`.
-3. **Review** the feature's documents. Decisions it needs are taken and recorded in
-   `6_roadmap.md`.
+2. **Plan:** enter the feature in `6_roadmap.md` with its milestone, scope, requirements and
+   dependencies. Name it after the capability it introduces (e.g. `rest-api`), or after the change
+   if it only changes existing capabilities (e.g. `chunked-minute-writes`).
+3. **Write and review:** the features of one milestone are written together, each as
+   `planned_features/<feature>/` with `1_specs.md`, `2_design.md` and `3_test.md` (section 6.7),
+   and reviewed one at a time. The decisions a feature needs are taken in its review and recorded
+   in its `2_design.md`.
 4. **Issues:** split the feature into GitHub issues (tasks) that reference its specification
    and test IDs.
 5. **Implement:** one branch and one pull request per issue (section 5.3).
 6. **Complete:** the pull request that completes the feature also merges it into the global
    files (section 6.4).
 
+**One milestone at a time.** The features of a milestone are implemented and merged before the
+features of the next milestone are written, so that each milestone is written against the code as
+it is. Before a milestone is written, the roadmap rows of all remaining milestones are reviewed:
+re-scoped, reordered or dropped. A feature whose design depends on a spike or a decision gate of
+another feature in its milestone is written once that outcome is known.
+
 States of a planned feature:
 
+- **Planned:** a row in `6_roadmap.md`, not written yet.
 - **Draft:** being written.
 - **Ready:** reviewed; may be implemented.
 - **In progress:** issues exist and work has started.
@@ -246,7 +255,7 @@ States of a planned feature:
 | Requirement priority | Must, Should, Could, Arch (an architectural constraint: not built now, but no design may block it) |
 | Planned specification and test changes | ADDED, MODIFIED `<ID>`, REMOVED `<ID>` |
 | Test cases | Implemented, Missing |
-| Planned features | Draft, Ready, In progress, Merged |
+| Planned features | Planned, Draft, Ready, In progress, Merged |
 
 ### 6.6 Traceability
 
@@ -338,7 +347,7 @@ order. A feature may correct the files of a Ready feature, in a commit of its ow
 | **Lease** | A time-limited claim renewed by a heartbeat, e.g. "worker 7 runs fetches until 12:05:30". If the holder dies, the claim expires on its own. |
 | **MIC** | Market Identifier Code (ISO 10383), the standard exchange code, e.g. `XNAS` (NASDAQ), `XNYS` (NYSE), `ARCX` (NYSE Arca). |
 | **OpenAPI** | A machine-readable description of a REST API, from which documentation and clients in other languages are generated. |
-| **Planned feature** | A change described in `planned_features/<feature>/`: a new capability, or changes to existing ones. Usually epic-sized. |
+| **Planned feature** | A change described in `planned_features/<feature>/`, or, before it is written, a row in `6_roadmap.md`: a new capability, or changes to existing ones. Usually epic-sized. |
 | **Point-in-time (PIT)** | Data as it was known on a given date, without later corrections, to avoid *look-ahead bias* in backtests. |
 | **Problem details** | A standard JSON format for HTTP error responses (RFC 9457). |
 | **Pure core** | The functions that only compute: values in, values out, with no network, database, clock or file access. The I/O code (the *shell*) gathers inputs, calls them and acts on the results. |
