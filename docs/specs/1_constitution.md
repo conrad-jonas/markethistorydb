@@ -156,10 +156,10 @@ src/markethistorydb/
 | `5_test.md` | status quo: test approach and test cases, each Implemented or Missing |
 | `6_roadmap.md` | milestones and the order of the planned features, with a row for each feature not yet written (scope, requirements, dependencies); decision gates, and the settled decisions that no other document records |
 | `7_traceability.md` | generated: requirement → specification → test, plus gap lists |
-| `planned_features/<feature>/1_specs.md` | the specification changes of a planned feature |
-| `planned_features/<feature>/2_design.md` | the design of that change: target design, options, decision, notes |
-| `planned_features/<feature>/3_test.md` | its test case changes |
-| `archive/<yyyy-mm-dd>-<feature>/` | planned features after they were merged, with the same three files |
+| `planned_features/<nn>_<feature>/1_specs.md` | the specification changes of a planned feature |
+| `planned_features/<nn>_<feature>/2_design.md` | the design of that change: target design, options, decision, notes |
+| `planned_features/<nn>_<feature>/3_test.md` | its test case changes |
+| `archive/<nn>_<feature>/` | planned features after they were merged, with the same three files |
 
 ### 6.2 Requirement, specification, design, test
 
@@ -192,11 +192,13 @@ verified by at least one test case.
 1. **New need:** add or change requirements in `2_requirements.md`.
 2. **Plan:** enter the feature in `6_roadmap.md` with its milestone, scope, requirements and
    dependencies. Name it after the capability it introduces (e.g. `rest-api`), or after the change
-   if it only changes existing capabilities (e.g. `chunked-minute-writes`).
+   if it only changes existing capabilities (e.g. `chunked-minute-writes`). Its number is its
+   position in the roadmap order, two digits (e.g. `05`); when the order changes, the numbers
+   follow.
 3. **Write and review:** the features of one milestone are written together, each as
-   `planned_features/<feature>/` with `1_specs.md`, `2_design.md` and `3_test.md` (section 6.7),
-   and reviewed one at a time. The decisions a feature needs are taken in its review and recorded
-   in its `2_design.md`.
+   `planned_features/<nn>_<feature>/` with `1_specs.md`, `2_design.md` and `3_test.md` (section
+   6.7), and reviewed one at a time. The decisions a feature needs are taken in its review and
+   recorded in its `2_design.md`.
 4. **Issues:** split the feature into GitHub issues (tasks) that reference its specification
    and test IDs.
 5. **Implement:** one branch and one pull request per issue (section 5.3).
@@ -230,8 +232,9 @@ States of a planned feature:
    limitations" the feature removes are deleted.
 3. **`3_test.md` into `5_test.md`,** in the same way. Status becomes Implemented, with
    "Implemented by" naming the tests.
-4. **Archive:** move the folder to `archive/<yyyy-mm-dd>-<feature>/`.
-5. **Roadmap:** in `6_roadmap.md`, mark the feature done and settle its decision gates.
+4. **Archive:** move the folder to `archive/`, keeping its name.
+5. **Roadmap:** in `6_roadmap.md`, mark the feature done with its merge date and settle its
+   decision gates.
 6. **Trace:** regenerate `7_traceability.md`; it must show no new gaps.
 
 ### 6.5 IDs and status values
@@ -243,10 +246,13 @@ States of a planned feature:
 | Test case | `<CAPABILITY>-T<nn>` | `PRICES-T07` | `5_test.md` or a planned `3_test.md` |
 | Milestone | `M<n>` | `M5` | `6_roadmap.md` |
 | Settled decision, decision gate | `DEC-<n>`, `DG-<n>` | `DG-3` | `6_roadmap.md` |
+| Planned feature | `<nn>_<name>`, *nn* its position in the roadmap order | `05_secret-redaction-hardening` | `6_roadmap.md` |
 
 - A planned feature takes new IDs from the namespace of the capability where the item will land,
   so after a merge every ID matches its chapter.
 - IDs are never reused.
+- A feature's number changes with the roadmap order, so text cites a feature by its name
+  (`code-hygiene`), never by its number or folder.
 - The trace script reports duplicate IDs and the next free number per capability.
 
 | Where | Status values |
@@ -347,7 +353,7 @@ order. A feature may correct the files of a Ready feature, in a commit of its ow
 | **Lease** | A time-limited claim renewed by a heartbeat, e.g. "worker 7 runs fetches until 12:05:30". If the holder dies, the claim expires on its own. |
 | **MIC** | Market Identifier Code (ISO 10383), the standard exchange code, e.g. `XNAS` (NASDAQ), `XNYS` (NYSE), `ARCX` (NYSE Arca). |
 | **OpenAPI** | A machine-readable description of a REST API, from which documentation and clients in other languages are generated. |
-| **Planned feature** | A change described in `planned_features/<feature>/`, or, before it is written, a row in `6_roadmap.md`: a new capability, or changes to existing ones. Usually epic-sized. |
+| **Planned feature** | A change described in `planned_features/<nn>_<feature>/`, or, before it is written, a row in `6_roadmap.md`: a new capability, or changes to existing ones. Usually epic-sized. |
 | **Point-in-time (PIT)** | Data as it was known on a given date, without later corrections, to avoid *look-ahead bias* in backtests. |
 | **Problem details** | A standard JSON format for HTTP error responses (RFC 9457). |
 | **Pure core** | The functions that only compute: values in, values out, with no network, database, clock or file access. The I/O code (the *shell*) gathers inputs, calls them and acts on the results. |

@@ -2,8 +2,8 @@
 
 How the implemented system is built: its structure, its data model, one chapter per capability,
 and the design decisions in force. What the system does is specified in `3_specs.md`; this file
-explains how. Planned designs are in `planned_features/<feature>/2_design.md` and enter this file
-when the feature is merged (`1_constitution.md`, section 6.4).
+explains how. Planned designs are in `planned_features/<nn>_<feature>/2_design.md` and enter this
+file when the feature is merged (`1_constitution.md`, section 6.4).
 
 Each capability chapter ends with its **known limitations**: structural properties of the design
 that no requirement covers directly (testability, coupling, duplication, missing seams), each

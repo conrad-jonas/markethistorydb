@@ -1,7 +1,7 @@
 # MarketHistoryDB: specification (status quo)
 
 The behaviour implemented today, one chapter per capability. Planned changes are specified in
-`planned_features/<feature>/1_specs.md` and enter this file when the feature is merged
+`planned_features/<nn>_<feature>/1_specs.md` and enter this file when the feature is merged
 (`1_constitution.md`, section 6.4).
 
 - **Specification items** state concrete, observable behaviour, including internal interfaces

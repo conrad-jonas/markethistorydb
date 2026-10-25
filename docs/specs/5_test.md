@@ -2,7 +2,7 @@
 
 How the implemented behaviour is tested: the test approach, then one chapter of test cases per
 capability, in the order of `3_specs.md`. Planned test changes are in
-`planned_features/<feature>/3_test.md` and enter this file when the feature is merged
+`planned_features/<nn>_<feature>/3_test.md` and enter this file when the feature is merged
 (`1_constitution.md`, section 6.4).
 
 ---
