@@ -45,7 +45,6 @@ records the race without fixing it (decided on 2026-10-23), and adds the baselin
   `2_design.md` 2.3 describes when a fetch is exposed.
 - **The check of eodhd's lists for reused tickers:** decided on 2026-10-23 to leave it to
   `listings-and-universe`, which gives instruments an identity beyond code and venue anyway.
-  This changes the assignment in `_migration.md` 1a.
 - **A measurement against the real provider:** decided on 2026-10-23, the baseline is synthetic
   only (`2_design.md` 5).
 - **Performance targets:** `release-1-0`.

@@ -276,7 +276,7 @@ What this feature leaves undone, and where it goes:
 
 | Decision | Choice | Reason |
 | -------- | ------ | ------ |
-| Live tests | opt-in through `-m 'not live'` in `addopts` | opt-in was settled in `_migration.md` 5; a later `-m` replaces it, so CI's explicit selections keep working; a flag such as `--live` would need a hook of its own |
+| Live tests | opt-in through `-m 'not live'` in `addopts` | opt-in is what QA-6 asks for; a later `-m` replaces it, so CI's explicit selections keep working; a flag such as `--live` would need a hook of its own |
 | Strictness | pytest's `strict = true` | one setting for the four rules; rules that later pytest versions add come with it, and pytest is only raised deliberately through the lock file |
 | No network in unit tests | pytest-socket, applied by the unit conftest | blocks the creation of sockets, which every connection needs; the unit tests pass with it |
 | Time limits | pytest-timeout: 30 s, 120 s, 300 s per level | section 2.4 |

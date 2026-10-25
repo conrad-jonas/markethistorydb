@@ -36,7 +36,7 @@ first.
   `test-suite-hardening` (CI selects the levels explicitly until then);
 - the nightly end-to-end test (real provider, container, setup, fetch, read back). It needs a
   fetch restricted to a few instruments (ING-15), so it moves to `ingestion-efficiency`, which
-  brings that restriction. This changes the assignment in `_migration.md` 1a;
+  brings that restriction;
 - publishing to TestPyPI and PyPI, and deploying the docs site: `release-1-0`; building the docs
   in CI: `publishing-readiness`;
 - performance and mutation tests: `data-integrity-checks`, `release-1-0`.
