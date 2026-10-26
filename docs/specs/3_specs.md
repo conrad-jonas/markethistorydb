@@ -465,6 +465,7 @@ look up stored records (REFDATA, PRICES).
 | `.env` is found only above the installed package's directory: after `pip install .` into an environment outside the project folder, the `.env` in the working directory is not read | OPS-3, DIST-1 | `publishing-readiness` |
 | No commands to inspect or export stored data | CMD-3, CMD-4 | `query-layer` |
 | `--exchange` takes the exchange's name in eodhd's list (e.g. `"USA Stocks"`), and only one | ING-15, PRV-1 | `settings-model`, `provider-interface` |
+| A termination signal (e.g. SIGTERM from a container platform) ends the process at once; only Ctrl+C is caught | CLD-6 | `cloud-readiness` |
 
 ---
 
@@ -485,7 +486,7 @@ look up stored records (REFDATA, PRICES).
 | --- | ----------- | --------- |
 | The masking misses the URL-encoded form (`api_token%3D…`), other spellings of the parameter (`API_TOKEN=`) and the bare token; the database password isn't masked at all | QA-8 | `secret-redaction-hardening` |
 | Plain text only, no structured format; log file location and terminal-only mode can't be configured from the command line | CLD-5, OPS-3 | `cloud-readiness`, `settings-model` |
-| Log times are local without a time zone, while all data is in UTC | OPS-4 | `cloud-readiness` |
+| Log times are local without a time zone, while all data is in UTC | COR-10 | `cloud-readiness` |
 
 ---
 
@@ -509,6 +510,8 @@ look up stored records (REFDATA, PRICES).
 | `uv.lock` is ignored by git, so installations aren't reproducible | QA-4, QA-7 | `continuous-integration` |
 | No versioning policy, no deprecation policy | DIST-3, DIST-7 | `publishing-readiness`, `release-1-0` |
 | No type checker, import rules or security checks in the toolchain | QA-4, QA-11, LIB-7 | `continuous-integration`, `library-contract` |
+| The README is the only documentation: no documentation site and no API reference | DIST-6 | `publishing-readiness` |
+| No user guide covers every interface | DIST-6 | `release-1-0` |
 
 ---
 
