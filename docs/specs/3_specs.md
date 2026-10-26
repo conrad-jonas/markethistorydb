@@ -9,9 +9,10 @@ The behaviour implemented today, one chapter per capability. Planned changes are
   (`2_requirements.md`).
 - **How it is built** is described in `4_design.md`; **how it is tested**, in `5_test.md`.
 - **Known gaps:** each chapter ends with the places where today's behaviour falls short of a
-  requirement, and the planned feature that closes each gap. A gap is listed once, in the
-  chapter of the specification item that its planned feature changes; other chapters don't
-  repeat it. Structural shortcomings of the design that no requirement covers (testability,
+  requirement, and the one planned feature that closes each gap. A shortfall that several
+  features close is split into one gap per feature, each describing its own part
+  (`1_constitution.md`, section 6.2). A gap is listed once, in the chapter of the specification
+  item that its planned feature changes; other chapters don't repeat it. Structural shortcomings of the design that no requirement covers (testability,
   coupling, duplication) are listed in `4_design.md` as known limitations, never here.
 - **Terms:** code names are used where they help to find the code, e.g. *symbol* for what the
   glossary calls an instrument, and the provider's *exchange code* for an exchange.
@@ -93,8 +94,8 @@ The behaviour implemented today, one chapter per capability. Planned changes are
 
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
-| Back-to-back replacements of two instruments' fundamentals may lose a write (suspected WAL race, not reproduced) | COR-1 | `data-integrity-checks` (test), `point-in-time-fundamentals` (no deletes) |
-| Two fundamental periods filed on the same day collapse into one record (STORAGE-S06) | COR-1 | `data-integrity-checks` (check, quick fix), `point-in-time-fundamentals` |
+| Back-to-back replacements of two instruments' fundamentals may lose a write (suspected WAL race, not reproduced) | COR-1 | `point-in-time-fundamentals` |
+| Two fundamental periods filed on the same day collapse into one record (STORAGE-S06) | COR-1 | `data-integrity-checks` |
 | A deletion is not atomic; a table can be missing until the next deletion repairs it (STORAGE-S19, S20) | COR-2 | `point-in-time-fundamentals` (no deletes) |
 | `setup` always drops every table; there is no "create what is missing" (STORAGE-S01) | COR-3, OPS-1 | `library-contract` |
 | An update stores "not a number" instead of NULL (STORAGE-S11) | COR-4 | `code-hygiene` |
@@ -160,7 +161,8 @@ The behaviour implemented today, one chapter per capability. Planned changes are
 
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
-| The contract checks cover fields and types, not value semantics (e.g. whether open, high, low and close are split-adjusted), and they don't run on a schedule | COR-17 | `data-integrity-checks`, `continuous-integration` |
+| The contract checks cover fields and types, not value semantics (e.g. whether open, high, low and close are split-adjusted) | COR-17 | `data-integrity-checks` |
+| The contract checks don't run on a schedule | COR-17 | `continuous-integration` |
 | Requests only react to rate limiting (429); there is no planning against the provider's per-minute and daily limits | ING-9 | `ingestion-scale` |
 | A new HTTP connection per request (no shared session) | OPS-2 | `code-hygiene` |
 | Provider specifics (codes, field names, the virtual exchange `US`) are spread over the request classes and reach the stored data | PRV-1, PRV-3 | `provider-interface` |
@@ -240,7 +242,7 @@ of the symbol follow (chapter FUND).
 
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
-| Past bars are never requested again: corrections by the provider, and the adjusted close of earlier bars after a split or dividend, don't reach the stored data | COR-12, BT-6 | `price-corrections`, `corporate-actions` |
+| Past bars are never requested again: corrections by the provider don't reach the stored data | COR-12 | `price-corrections` |
 | Bars the provider no longer delivers stay stored | COR-13 | `price-corrections` |
 | Only the provider's adjusted close is stored, as it was at fetch time; no adjustment on read | BT-5, BT-6 | `corporate-actions` |
 | A symbol's minute windows are held in memory and written at the end; a failure in window *k* loses windows 1 to *k*−1, and memory grows with the history | ING-13, ING-14 | `ingestion-efficiency` |
@@ -281,11 +283,12 @@ specified in REFDATA (REFDATA-S08).
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
 | A revised value replaces the earlier one; nothing records when a value became known, so fundamentals can't be read as known on a past date | BT-8, BT-9 | `point-in-time-fundamentals` |
-| Replacement is delete-then-write per table: a failed write leaves the table without the symbol's records; a suspected race between the delete and pending writes (STORAGE, section 1.7) | COR-1, COR-2 | `data-integrity-checks`, `point-in-time-fundamentals` |
+| Replacement is delete-then-write per table: a failed write leaves the table without the symbol's records | COR-2 | `point-in-time-fundamentals` |
 | The full history is requested in every pass the symbol takes part in, so a NASDAQ or NYSE stock in both the daily and the minute data gets its fundamentals twice per status | ING-7, ING-8 | `ingestion-efficiency` |
 | Fundamentals only for `NASDAQ` and `NYSE`, fixed in the code | MKT-9, OPS-3 | `settings-model` |
 | Records the provider withdraws stay stored only until the next replacement, without any trace | COR-13, BT-9 | `point-in-time-fundamentals` |
-| Fields are stored under eodhd's names in fixed tables; a new field fails the symbol | PRV-5, PRV-6 | `provider-interface`, `point-in-time-fundamentals` |
+| There is no provider-independent list of fundamental concepts; the tables have one column per eodhd field | PRV-5 | `point-in-time-fundamentals` |
+| Fields are stored under eodhd's names, not mapped to concepts | PRV-5, PRV-6 | `provider-interface` |
 
 ---
 
@@ -331,7 +334,8 @@ reference data (REFDATA), then works through its symbols: prices (PRICES), then 
 | A failed exchange or symbol list (after its retries) ends the fetch, not just that exchange | ING-4 | `ingestion-efficiency` |
 | The outcome is a log and a count; failed symbols aren't returned to the caller, and "downloaded" doesn't tell stored from up to date | LIB-9, ING-6 | `library-contract` |
 | No run history and no retry of only the failed symbols. An interrupted fetch isn't resumed: the next fetch starts over with every pass and every symbol, and only the prices pick up where they stopped, because each symbol's price request starts after its newest stored bar (`4_design.md` 8.7) | ING-10, ING-11, ING-16 | `run-tracking` |
-| The storage check looks at the machine running the fetch, not the database host; 50 GB, 20 failures and 10 summary lines are fixed in the code | ING-18, OPS-3 | `ingestion-scale`, `settings-model` |
+| The storage check looks at the machine running the fetch, not the database host | ING-18 | `ingestion-scale` |
+| The free space required (50 GB), the failures before a stop (20) and the failed symbols in the summary (10) are fixed in the code | OPS-3 | `settings-model` |
 | Symbols are handled one at a time | ING-17 | `ingestion-scale` |
 
 ---
@@ -378,7 +382,7 @@ look up stored records (REFDATA, PRICES).
 | `exchange`, `symbol`, `sector` and `newest_of_ohlcv` have no docstrings | LIB-6 | `library-contract` |
 | Timezone-aware bounds aren't rejected, local times are read as UTC | COR-11 | `library-contract` |
 | The order of the bars isn't specified | BT-12 | `query-layer` |
-| No adjusted prices on read, no aggregation to coarser intervals, no latest *N* bars, no gap handling | BT-5, BT-10, BT-11, BT-12 | `corporate-actions`, `query-layer` |
+| No aggregation to coarser intervals, no latest *N* bars, no choice of gap handling | BT-10, BT-11, BT-12 | `query-layer` |
 
 ---
 
@@ -408,10 +412,10 @@ look up stored records (REFDATA, PRICES).
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
 | No `__all__`, no `__version__`, no `py.typed` marker | LIB-5, LIB-7, LIB-10 | `library-contract` |
-| No `close()` and no context manager; a client holds nothing to release only because every operation opens its own connections | LIB-8, OPS-2 | `library-contract`, `connection-reuse` |
+| No `close()` and no context manager | LIB-8 | `library-contract` |
 | `fetch` returns a count, not an outcome the caller can act on | LIB-9 | `library-contract` |
 | `Client.__init__` has no docstring (the `Read` methods: ACCESS, section 7.4) | LIB-6 | `library-contract` |
-| The public API isn't checked by a type checker | LIB-7 | `library-contract` |
+| No type checker checks the code, the public API included | QA-4, LIB-7 | `library-contract` |
 
 ---
 
@@ -433,8 +437,9 @@ look up stored records (REFDATA, PRICES).
 | --- | ----------- | --------- |
 | Only the token and the connection settings are configurable; fetch scope (exchanges, venues), thresholds, timeouts and paths are fixed in the code | OPS-3, MKT-9 | `settings-model` |
 | Secrets come from environment variables only, not from files | CLD-3 | `settings-model` |
-| No encrypted database connections (TLS) can be configured | CLD-8 | `connection-reuse`, `cloud-readiness` |
-| One provider, named in the field (`eodhd_api_token`) | PRV-3, PRV-8 | `provider-interface`, `settings-model` |
+| No encrypted database connections (TLS) can be configured | CLD-8 | `connection-reuse` |
+| The settings hold one provider's token, as the field `eodhd_api_token`; there are no settings per provider | PRV-3, PRV-8 | `settings-model` |
+| Every data kind comes from eodhd; a provider can't be assigned per data kind or instrument | PRV-8 | `provider-interface` |
 
 ---
 
@@ -464,7 +469,7 @@ look up stored records (REFDATA, PRICES).
 | Ctrl+C on the command line raises `KeyboardInterrupt` wherever the run is, e.g. between deleting and writing a symbol's fundamentals (FUND-S07), instead of using the stop function; the stop points of RUNS-S08 are used by the library only | ING-3 | `library-contract` |
 | `.env` is found only above the installed package's directory: after `pip install .` into an environment outside the project folder, the `.env` in the working directory is not read | OPS-3, DIST-1 | `publishing-readiness` |
 | No commands to inspect or export stored data | CMD-3, CMD-4 | `query-layer` |
-| `--exchange` takes the exchange's name in eodhd's list (e.g. `"USA Stocks"`), and only one | ING-15, PRV-1 | `settings-model`, `provider-interface` |
+| `--exchange` takes the exchange's name in eodhd's list (e.g. `"USA Stocks"`), not a provider-independent identifier | PRV-1 | `provider-interface` |
 | A termination signal (e.g. SIGTERM from a container platform) ends the process at once; only Ctrl+C is caught | CLD-6 | `cloud-readiness` |
 
 ---
@@ -485,7 +490,8 @@ look up stored records (REFDATA, PRICES).
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
 | The masking misses the URL-encoded form (`api_token%3D…`), other spellings of the parameter (`API_TOKEN=`) and the bare token; the database password isn't masked at all | QA-8 | `secret-redaction-hardening` |
-| Plain text only, no structured format; log file location and terminal-only mode can't be configured from the command line | CLD-5, OPS-3 | `cloud-readiness`, `settings-model` |
+| Plain text only, no structured format | CLD-5 | `cloud-readiness` |
+| The log file location and terminal-only mode can't be configured from the command line | OPS-3 | `settings-model` |
 | Log times are local without a time zone, while all data is in UTC | COR-10 | `cloud-readiness` |
 
 ---
@@ -504,12 +510,13 @@ look up stored records (REFDATA, PRICES).
 
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
-| No license, no authors, URLs or classifiers in the metadata; not published | DIST-2 | `publishing-readiness`, `release-1-0` (the act of publishing) |
+| No license, no authors, URLs or classifiers in the metadata | DIST-2 | `publishing-readiness` |
+| Not published on PyPI | DIST-2 | `release-1-0` |
 | No changelog, contribution guidelines, security policy or statement of non-affiliation | DIST-4 | `publishing-readiness` |
 | No optional parts (extras); every dependency is always installed | DIST-5 | `publishing-readiness` |
 | `uv.lock` is ignored by git, so installations aren't reproducible | QA-4, QA-7 | `continuous-integration` |
-| No versioning policy, no deprecation policy | DIST-3, DIST-7 | `publishing-readiness`, `release-1-0` |
-| No type checker, import rules or security checks in the toolchain | QA-4, QA-11, LIB-7 | `continuous-integration`, `library-contract` |
+| No versioning policy | DIST-3 | `publishing-readiness` |
+| No deprecation policy | DIST-7 | `release-1-0` |
 | The README is the only documentation: no documentation site and no API reference | DIST-6 | `publishing-readiness` |
 | No user guide covers every interface | DIST-6 | `release-1-0` |
 
@@ -533,9 +540,14 @@ it guarantees.
 
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
-| Nothing checks changes automatically before they are merged; ruff isn't enforced, no type checker or import rules run | QA-4, QA-14 | `continuous-integration`, `code-hygiene`, `library-contract` |
+| Nothing checks changes automatically before they are merged: no CI runs the tests or the build | QA-4 | `continuous-integration` |
+| ruff isn't configured or enforced | QA-4, QA-14 | `code-hygiene` |
+| No import rules are checked | QA-4 | `target-architecture` |
+| The code isn't checked for common security mistakes | QA-11 | `secret-redaction-hardening` |
 | Unknown markers, new warnings, hanging tests and unit tests that use the network don't fail the run | QA-5 | `test-suite-hardening` |
 | Live tests run by default and spend the account's calls | QA-6 | `test-suite-hardening` |
 | The integration database is started by hand; no container | QA-7 | `continuous-integration` |
 | Test doubles aren't checked against the interfaces they replace | QA-12 | `testable-core` |
-| No performance baseline, no mutation testing, no dependency audit | QA-11, QA-13, QA-15 | `continuous-integration`, `data-integrity-checks`, `release-1-0` |
+| Dependencies aren't audited for known vulnerabilities | QA-11 | `continuous-integration` |
+| No performance baseline: a regression in requests, statements or run time goes unnoticed | QA-13 | `data-integrity-checks` |
+| No performance targets, and no mutation testing | QA-13, QA-15 | `release-1-0` |
