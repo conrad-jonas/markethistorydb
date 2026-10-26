@@ -71,7 +71,7 @@ behaviour that stays as it is. M0 is the safety net for the refactorings of M2
 | Change | ID | Specification | Satisfies |
 | ------ | -- | ------------- | --------- |
 | MODIFIED | QUALITY-S04 | Every integration test starts on exactly the tables `setup` creates, all empty, which it sets up itself: tables `setup` doesn't create, such as the copy left by an interrupted deletion (STORAGE-S20), are dropped first. The instance is the container of CI-S11 or the one named by the override. (Builds on the text of `continuous-integration`.) | QA-7 |
-| MODIFIED | PACKAGING-S03 | `uv sync` installs it for development, together with the development tools: pytest with the plugins pytest-cov, pytest-timeout and pytest-socket, ruff and pyright. `pip install .` installs it as a package. The README says so. (pyright comes with `continuous-integration`.) | DIST-1, DIST-6 |
+| MODIFIED | PACKAGING-S03 | `uv sync` installs it for development, together with the development tools: pytest with the plugins pytest-cov, pytest-timeout and pytest-socket, testcontainers, ruff and pyright. `pip install .` installs it as a package. The README says so. (testcontainers and pyright come with `continuous-integration`.) | DIST-1, DIST-6 |
 
 ### Data read back and series across runs
 

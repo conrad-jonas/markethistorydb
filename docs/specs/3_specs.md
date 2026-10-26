@@ -74,7 +74,7 @@ The behaviour implemented today, one chapter per capability. Planned changes are
 | ID | Specification | Satisfies |
 | -- | ------------- | --------- |
 | STORAGE-S16 | Each SQL statement is sent on its own, since QuestDB runs one statement per query, on a new connection that is closed afterwards: autocommit, client-side parameter binding, a connect timeout of 10 s. A statement that returns no result set (e.g. `UPDATE`, DDL) returns no records. | MKT-2, CLD-8 |
-| STORAGE-S17 | Values are always bound as parameters, never formatted into the statement text, and table and column names are quoted as identifiers. | QA-10 |
+| STORAGE-S17 | Values are bound as parameters, except the symbol codes of the price reads, which go into the statement as quoted literals (ACCESS-S09). Table and column names come from the code's own constants; the deletion statements quote table names as identifiers. | QA-10 |
 | STORAGE-S18 | A failed statement, a table that does not exist, an unreachable database and a rejected login all raise `QueryError`. The message never contains the database password. | LIB-4, QA-8 |
 
 ### 1.5 Deleting an instrument's records
