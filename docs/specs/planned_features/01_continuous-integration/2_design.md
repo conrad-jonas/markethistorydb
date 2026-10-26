@@ -293,7 +293,7 @@ each (`1_constitution.md` 6.3, step 4). Proposed issues, in this order:
 | # | Issue | Pull request |
 | - | ----- | ------------ |
 | 1 | Track `uv.lock` | yes |
-| 2 | Container fixture, with the unit tests of `choose_test_database` | yes |
+| 2 | Container fixture, with the unit tests of `choose_test_database`; testcontainers as dev dependency | yes |
 | 3 | `ci.yml`, `dependabot.yml`, pyright as dev dependency | yes |
 | 4 | Create the repository, push `main` and `v0.1.0`; ruleset; environment `nightly` with the secret | no: settings on GitHub; the first run of `ci.yml` starts with the push |
 | 5 | `nightly.yml` and `live_summary.py` with its unit tests; one manual run | yes |
