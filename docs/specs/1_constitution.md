@@ -137,7 +137,8 @@ src/markethistorydb/
 ### 5.3 Git workflow
 
 - `main` only receives merges: every change is made on a branch named `feature/…`, `fix/…`,
-  `test/…`, `refactor/…` or `chore/…` and merged with `git merge --no-ff`.
+  `test/…`, `refactor/…`, `chore/…` or, for the specification documents, `docs/…`, and merged
+  with `git merge --no-ff`.
 - Once the repository is on GitHub, every branch is merged through a pull request, and each
   pull request implements one GitHub issue.
 - `CLAUDE.md` and `.claude/` stay untracked (`.git/info/exclude`).
@@ -153,12 +154,12 @@ src/markethistorydb/
 | `3_specs.md` | status quo: the specification of everything implemented, one chapter per capability |
 | `4_design.md` | status quo: how the implemented system is built, and the design decisions in force |
 | `5_test.md` | status quo: test approach and test cases, each Implemented or Missing |
-| `6_roadmap.md` | milestones and the order of the planned features; settled decisions and decision gates |
+| `6_roadmap.md` | milestones and the order of the planned features, with a row for each feature not yet written (scope, requirements, dependencies); decision gates, and the settled decisions that no other document records |
 | `7_traceability.md` | generated: requirement → specification → test, plus gap lists |
-| `planned_features/<feature>/1_specs.md` | the specification changes of a planned feature |
-| `planned_features/<feature>/2_design.md` | the design of that change: target design, options, decision, notes |
-| `planned_features/<feature>/3_test.md` | its test case changes |
-| `archive/<yyyy-mm-dd>-<feature>/` | planned features after they were merged, with the same three files |
+| `planned_features/<nn>_<feature>/1_specs.md` | the specification changes of a planned feature |
+| `planned_features/<nn>_<feature>/2_design.md` | the design of that change: target design, options, decision, notes |
+| `planned_features/<nn>_<feature>/3_test.md` | its test case changes |
+| `archive/<nn>_<feature>/` | planned features after they were merged, with the same three files |
 
 ### 6.2 Requirement, specification, design, test
 
@@ -166,36 +167,53 @@ src/markethistorydb/
   - It is solution-neutral: no tables, functions, libraries or formats, unless the choice itself
     is the owner's decision (REST, PyPI, MIT, QuestDB).
   - It is atomic and verifiable, and phrased as "The system shall …".
-  - Its status follows from its specification items: **Done** if all of them are in
-    `3_specs.md`, **Partial** if some are, **Open** if none are.
+  - Its status follows from `3_specs.md`: **Open** if no specification item there satisfies it;
+    **Partial** if one does and a known gap cites it; **Done** if one does and no known gap
+    cites it. Planned items don't change the status before they are merged.
 - **A specification item** states concrete, observable behaviour: interfaces, inputs and outputs,
   rules, limits, errors, stored data. It names the requirements it satisfies.
+- **A known gap** (`3_specs.md`, at the end of each chapter) is a place where the implemented
+  behaviour falls short of a requirement. It names the requirements it falls short of and
+  exactly one planned feature that closes it. A shortfall that several features close is split
+  into one gap per feature, each describing its own part.
 - **The design** describes how the specification is realised: structure, data model, algorithms,
   and the options considered with the reasons for the choice.
 - **A test case** describes a check in given/when/then form. It names the specification items it
-  verifies, its level (unit, integration, live, performance) and the tests that implement it.
+  verifies, its level (unit, integration, live, static, suite or ci) and the tests that implement
+  it.
 
 **Completeness.** Every requirement is satisfied by at least one specification item, implemented
-or planned. Every specification item satisfies at least one requirement. Every implemented
-specification item is verified by at least one test case.
+or planned, or is assigned to a planned feature not yet written (`6_roadmap.md`). Every
+specification item satisfies at least one requirement. Every implemented specification item is
+verified by at least one test case.
 
 ### 6.3 Workflow
 
 1. **New need:** add or change requirements in `2_requirements.md`.
-2. **Plan:** create `planned_features/<feature>/` with `1_specs.md`, `2_design.md` and
-   `3_test.md`. Name it after the capability it introduces (e.g. `rest-api`), or after the change
-   if it only changes existing capabilities (e.g. `chunked-minute-writes`). Enter it in
-   `6_roadmap.md`.
-3. **Review** the feature's documents. Decisions it needs are taken and recorded in
-   `6_roadmap.md`.
+2. **Plan:** enter the feature in `6_roadmap.md` with its milestone, scope, requirements and
+   dependencies. Name it after the capability it introduces (e.g. `rest-api`), or after the change
+   if it only changes existing capabilities (e.g. `chunked-minute-writes`). Its number is its
+   position in the roadmap order, two digits (e.g. `05`); when the order changes, the numbers
+   follow.
+3. **Write and review:** the features of one milestone are written together, each as
+   `planned_features/<nn>_<feature>/` with `1_specs.md`, `2_design.md` and `3_test.md` (section
+   6.7), and reviewed one at a time. The decisions a feature needs are taken in its review and
+   recorded in its `2_design.md`.
 4. **Issues:** split the feature into GitHub issues (tasks) that reference its specification
    and test IDs.
 5. **Implement:** one branch and one pull request per issue (section 5.3).
 6. **Complete:** the pull request that completes the feature also merges it into the global
    files (section 6.4).
 
+**One milestone at a time.** The features of a milestone are implemented and merged before the
+features of the next milestone are written, so that each milestone is written against the code as
+it is. Before a milestone is written, the roadmap rows of all remaining milestones are reviewed:
+re-scoped, reordered or dropped. A feature whose design depends on a spike or a decision gate of
+another feature in its milestone is written once that outcome is known.
+
 States of a planned feature:
 
+- **Planned:** a row in `6_roadmap.md`, not written yet.
 - **Draft:** being written.
 - **Ready:** reviewed; may be implemented.
 - **In progress:** issues exist and work has started.
@@ -207,14 +225,16 @@ States of a planned feature:
    - ADDED items are appended to their capability chapter (a new chapter for a new capability);
    - MODIFIED items replace the text, keeping the ID;
    - REMOVED items are deleted;
-   - the rows of "Known gaps" the feature closes are removed.
+   - the rows of "Known gaps" the feature closes are removed, and the rows it changes or adds are
+     applied.
 2. **`2_design.md` into `4_design.md`:** changed sections are replaced, a new capability gets a
    new chapter, decision outcomes go to "Design decisions in force", and the rows of "Known
    limitations" the feature removes are deleted.
 3. **`3_test.md` into `5_test.md`,** in the same way. Status becomes Implemented, with
    "Implemented by" naming the tests.
-4. **Archive:** move the folder to `archive/<yyyy-mm-dd>-<feature>/`.
-5. **Roadmap:** in `6_roadmap.md`, mark the feature done and settle its decision gates.
+4. **Archive:** move the folder to `archive/`, keeping its name.
+5. **Roadmap:** in `6_roadmap.md`, mark the feature done with its merge date and settle its
+   decision gates.
 6. **Trace:** regenerate `7_traceability.md`; it must show no new gaps.
 
 ### 6.5 IDs and status values
@@ -226,10 +246,13 @@ States of a planned feature:
 | Test case | `<CAPABILITY>-T<nn>` | `PRICES-T07` | `5_test.md` or a planned `3_test.md` |
 | Milestone | `M<n>` | `M5` | `6_roadmap.md` |
 | Settled decision, decision gate | `DEC-<n>`, `DG-<n>` | `DG-3` | `6_roadmap.md` |
+| Planned feature | `<nn>_<name>`, *nn* its position in the roadmap order | `05_secret-redaction-hardening` | `6_roadmap.md` |
 
 - A planned feature takes new IDs from the namespace of the capability where the item will land,
   so after a merge every ID matches its chapter.
 - IDs are never reused.
+- A feature's number changes with the roadmap order, so text cites a feature by its name
+  (`code-hygiene`), never by its number or folder.
 - The trace script reports duplicate IDs and the next free number per capability.
 
 | Where | Status values |
@@ -238,7 +261,7 @@ States of a planned feature:
 | Requirement priority | Must, Should, Could, Arch (an architectural constraint: not built now, but no design may block it) |
 | Planned specification and test changes | ADDED, MODIFIED `<ID>`, REMOVED `<ID>` |
 | Test cases | Implemented, Missing |
-| Planned features | Draft, Ready, In progress, Merged |
+| Planned features | Planned, Draft, Ready, In progress, Merged |
 
 ### 6.6 Traceability
 
@@ -253,11 +276,54 @@ it by hand. It shows:
   - implemented specification items without an implemented test case;
   - MODIFIED or REMOVED items pointing to a non-existent ID;
   - duplicate or dangling IDs;
-- **the next free ID** per capability.
+  - requirements whose status in `2_requirements.md` differs from the one the known gaps give
+    (section 6.2);
+- **the next free ID** per capability;
+- **per planned feature:** the known gaps it closes, and the status of each requirement after its
+  merge, with the features before it merged first.
 
-Once the documents are tracked in git, the script becomes `scripts/trace.py` and CI runs it with
+The planned feature `traceability` brings the script as `scripts/trace.py`, which CI runs with
 `--check`. Tests then carry `@pytest.mark.spec("<ID>")`, so code and test cases link
 automatically.
+
+### 6.7 Files of a planned feature
+
+Each fact is stated once, in the file where it belongs. What the trace script derives (section
+6.6) is not written by hand.
+
+**`1_specs.md`:**
+
+- **Header line:** state, milestone, kind (a new capability, or a change to existing ones), the
+  requirements whose status the feature changes, and the features it depends on.
+- **Why:** the problem the feature solves, in a few lines.
+- **Specification changes:** tables `Change | ID | Specification | Satisfies`, grouped by topic.
+  ADDED and MODIFIED items carry their full text, REMOVED items their ID.
+- **Known gaps changed** and **Known gaps added:** the rows of `3_specs.md` the feature changes
+  or adds, if any. The rows it closes are not listed (section 6.6).
+- **Not done:** a table `Item | Where | Why` of what the feature leaves out. *Where* is another
+  feature, or "nowhere: dropped" with the reason.
+
+**`2_design.md`:**
+
+- **Overview:** the parts of the change and the files each touches.
+- **Design per part:** what an implementer can't take from the specification or the code, kept
+  short.
+- **Decisions:** a table `Decision | Choice | Options considered | Reason`, the only place a
+  decision is recorded. A measurement that supports a decision appears there as a one-line
+  conclusion.
+- **Implementation:** the GitHub issues, one branch and pull request each, with the IDs each
+  covers and their order.
+- **Open questions.**
+- **Changes to `4_design.md` on merge:** the numbers of the sections that change, and the rows of
+  "Known limitations" the feature removes.
+
+**`3_test.md`:** tables `Change | ID | Test case | Verifies | Level | Status | Implemented by`,
+grouped as in `1_specs.md`. An ADDED test case is Missing. A MODIFIED one is Missing if its tests
+must be added or changed, and Implemented if they stay as they are. "Implemented by" names the
+tests once they exist, and is "—" before.
+
+**Across features:** a MODIFIED item builds on the text of the features before it in roadmap
+order. A feature may correct the files of a Ready feature, in a commit of its own.
 
 ---
 
@@ -287,7 +353,7 @@ automatically.
 | **Lease** | A time-limited claim renewed by a heartbeat, e.g. "worker 7 runs fetches until 12:05:30". If the holder dies, the claim expires on its own. |
 | **MIC** | Market Identifier Code (ISO 10383), the standard exchange code, e.g. `XNAS` (NASDAQ), `XNYS` (NYSE), `ARCX` (NYSE Arca). |
 | **OpenAPI** | A machine-readable description of a REST API, from which documentation and clients in other languages are generated. |
-| **Planned feature** | A change described in `planned_features/<feature>/`: a new capability, or changes to existing ones. Usually epic-sized. |
+| **Planned feature** | A change described in `planned_features/<nn>_<feature>/`, or, before it is written, a row in `6_roadmap.md`: a new capability, or changes to existing ones. Usually epic-sized. |
 | **Point-in-time (PIT)** | Data as it was known on a given date, without later corrections, to avoid *look-ahead bias* in backtests. |
 | **Problem details** | A standard JSON format for HTTP error responses (RFC 9457). |
 | **Pure core** | The functions that only compute: values in, values out, with no network, database, clock or file access. The I/O code (the *shell*) gathers inputs, calls them and acts on the results. |

@@ -46,7 +46,7 @@ behaviour that stays as it is. M0 is the safety net for the refactorings of M2
 - **A local smoke test of the installed console script.** CI-T05 runs the installed command from
   the built wheel on every pull request. A subprocess test in the development environment would
   add little, and once past the argument parsing it would load the repository's `.env` (CLI-S02)
-  and reach the application's database. This changes the assignment in `_migration.md` 1a.
+  and reach the application's database.
 - **The fix for a daily bar without volume** (found while writing this feature; known gap added
   below): `code-hygiene`, next to the other fix for COR-4 there.
 - **The trace script in `scripts/` and `spec` markers on the tests** (`1_constitution.md` 6.6):

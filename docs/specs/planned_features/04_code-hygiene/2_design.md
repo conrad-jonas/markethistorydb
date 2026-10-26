@@ -366,7 +366,7 @@ Client.fetch
 | pre-commit hooks (Library readiness 10: "optional") | nowhere: dropped | *lint* checks every pull request; a local hook is each developer's own choice |
 | Symbol and exchange as arguments of `WriteFundamentalData` (Architecture plan 1.6) | `testable-core` | `4_design.md` 7.5: testing rule 2 applies to every writer and request class |
 | The time-frame branches of the request, download and write classes (Architecture plan 1.3, beyond the table lookup) | `testable-core` | `4_design.md` 6.7 |
-| `ErrorCode` moved to `cli.py`, a real prompt and `--yes` (Architecture plan 1.9, 1.10) | `library-contract` | `_migration.md` 4 |
+| `ErrorCode` moved to `cli.py`, a real prompt and `--yes` (Architecture plan 1.9, 1.10) | `library-contract` | part of that feature's safe setup and command line (COR-3, CMD-2) |
 | Reusing the database connections | `connection-reuse` | OPS-2, database side |
 | Import rules | `target-architecture` | DG-1 settles the package layout first |
 

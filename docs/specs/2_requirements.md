@@ -69,7 +69,7 @@ Every requirement of the project, implemented or not.
 | COR-7 | The system shall check every provider response for the expected structure and data types before using it. | Malformed responses must fail loudly, not produce wrong records. | Must | Done |
 | COR-8 | Identifiers received from the provider shall not be able to change the meaning of a request built from them. | Provider data is not trusted to be safe in URLs. | Must | Done |
 | COR-9 | Records the database cannot store shall be skipped explicitly and reported with their number, instrument and data kind, and shall not cause other records to be lost. | Users must know what is missing and why. | Must | Done (reported in the log only; see COR-14) |
-| COR-10 | All points in time shall follow one documented convention (UTC) in storage, requests and interfaces. | Mixed time zones shift data unnoticed. | Must | Done |
+| COR-10 | All points in time shall follow one documented convention (UTC) in storage, requests and interfaces. | Mixed time zones shift data unnoticed. | Must | Partial: log times are local, without a time zone |
 | COR-11 | The system shall reject inputs that break its documented conventions, such as points in time in another time zone, instead of silently misreading them. | Silent misreading shifts results unnoticed. | Should | Open: the convention is documented (COR-10), not enforced |
 | COR-12 | Corrections the provider makes to past data shall reach the stored data within a configurable time. | Stale history makes backtests disagree with reality. | Must | Open |
 | COR-13 | Data the provider no longer delivers shall no longer be served as current. | Removed bars or withdrawn reports must not linger. | Should | Open |
@@ -163,9 +163,9 @@ Every requirement of the project, implemented or not.
 | ING-1 | Transient failures of the provider, the network or the database shall be retried with growing delays, honouring a waiting time the provider asks for. | Short outages must not fail a run. | Must | Done |
 | ING-2 | Waiting between retries shall be interruptible. | Users must be able to stop at any time. | Must | Done |
 | ING-3 | A running fetch shall be stoppable by the user at defined points, leaving stored data consistent. | Users must be able to abort a fetch safely. | Must | Partial: the library stops at defined points; Ctrl+C on the command line stops wherever the run is |
-| ING-4 | The failure of a single instrument shall not end a run; it shall be recorded and the run continued. | One bad instrument must not cost a whole run. | Must | Done |
+| ING-4 | The failure of a single instrument shall not end a run; it shall be recorded and the run continued. | One bad instrument must not cost a whole run. | Must | Partial: a failed pass, or a failed exchange or symbol list, ends the fetch |
 | ING-5 | A run shall end early when errors show that continuing cannot succeed: a rejected account, an exhausted quota, full storage, an interruption, or a long series of failures. | Avoids burning the quota on a broken run. | Must | Done |
-| ING-6 | Every run shall end with a summary of what was fetched, what failed and what was not attempted. | Users must see the outcome at a glance. | Must | Done |
+| ING-6 | Every run shall end with a summary of what was fetched, what failed and what was not attempted. | Users must see the outcome at a glance. | Must | Partial: an up-to-date symbol is logged as having no data and counted as downloaded |
 | ING-7 | Each data item shall be requested from the provider at most once per run. | Provider requests cost quota and money. | Must | Partial: fundamentals are requested twice for instruments in both the daily and the minute pass |
 | ING-8 | A run shall request only data that is not stored yet or may have changed. | Same reason. | Must | Partial: prices are fetched incrementally; fundamentals are always fetched in full |
 | ING-9 | Runs shall stay within the provider's request and quota limits. | Exceeding them blocks the account. | Must | Partial: the run reacts to rate-limit responses; no planning against the quota |
@@ -216,7 +216,7 @@ Every requirement of the project, implemented or not.
 
 | ID | Requirement | Rationale | Prio | Status |
 | -- | ----------- | --------- | ---- | ------ |
-| DIST-1 | The package shall be installable with standard Python tooling and provide a command-line entry point. | Basic usability. | Must | Done |
+| DIST-1 | The package shall be installable with standard Python tooling and provide a command-line entry point. | Basic usability. | Must | Partial: the installed command finds `.env` only above the package's directory |
 | DIST-2 | The package shall be published on PyPI under the MIT license, with complete metadata. | The standard distribution channel for Python packages. | Must | Open |
 | DIST-3 | Releases shall follow semantic versioning; before 1.0 the API counts as unstable. | Users need to know which upgrades are safe. | Must | Open |
 | DIST-4 | The project shall provide a changelog, contribution guidelines, a security policy, and a statement that it is not affiliated with eodhd.com or QuestDB. | Expected of an open-source project. | Must | Open |
