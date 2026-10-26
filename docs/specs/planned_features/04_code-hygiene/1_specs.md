@@ -119,8 +119,8 @@ Checked on 2026-10-24 while this feature was written (`2_design.md`, sections 5 
 | ----------- | ------ | ----- |
 | COR-3 | Partial | Partial: the command line asks for confirmation; the library's setup always deletes everything (`library-contract`); a deletion request for a table other than a fundamental one is refused |
 | COR-4 | Partial | Done: verified for bars (STORAGE-S22), reference records and fundamentals; updates store NULL, and a daily bar without volume is stored |
-| COR-12 | Open | Partial: corrections to reference data, the ISIN now included, and to fundamentals reach the stored data on every run; past bars are never requested again (`price-corrections`, `corporate-actions`); no configurable time |
-| ING-6 | Done | Done; the log tells a symbol without data from an up-to-date one |
+| COR-12 | Open | Partial: corrections to reference data, the ISIN now included, and to fundamentals reach the stored data on every run; past bars are never requested again (`price-corrections`); no configurable time |
+| ING-6 | Partial | Partial: the log tells a symbol without data from an up-to-date one; the run summary still counts an up-to-date symbol as downloaded (`library-contract`) |
 | OPS-2 | Open | Partial: the provider connections are reused within a fetch; the database connections are still opened per statement and per ingestion call (`connection-reuse`) |
 | QA-4 | Partial | Partial: tests, build, audit and lint block a merge; types only report (`library-contract`); architecture rules aren't checked (`target-architecture`) |
 | QA-14 | Open | Done: ruff configured and enforced, naming and logging rules included; the known unused code removed |
@@ -135,4 +135,4 @@ Checked on 2026-10-24 while this feature was written (`2_design.md`, sections 5 
 | 3.4 REFDATA | A changed ISIN is never stored: the symbol update leaves it at its first value (STORAGE-S11) |
 | 4.3 PRICES | The log says "No data exists" also for a symbol that is merely up to date |
 | 4.3 PRICES | A daily bar without volume can't be stored … (added by `test-suite-hardening`) |
-| 13.2 QUALITY | Nothing checks changes automatically before they are merged; ruff isn't enforced … (the ruff part; the rest stays with `library-contract`) |
+| 13.2 QUALITY | ruff isn't configured or enforced |

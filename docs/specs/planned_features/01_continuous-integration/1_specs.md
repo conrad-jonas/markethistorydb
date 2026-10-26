@@ -98,8 +98,8 @@ New capability CI (`3_specs.md` gets a chapter "CI: continuous integration" on m
 
 | `3_specs.md` | Gap |
 | ------------ | --- |
-| 2.6 PROVIDER | The contract checks … don't run on a schedule (the schedule part; the value semantics stay with `data-integrity-checks`) |
+| 2.6 PROVIDER | The contract checks don't run on a schedule |
 | 12.2 PACKAGING | `uv.lock` is ignored by git |
 | 13.2 QUALITY | The integration database is started by hand; no container |
-| 13.2 QUALITY | Nothing checks changes automatically before they are merged (in part: tests, build and audit; ruff and pyright stay with `code-hygiene` and `library-contract`) |
-| 13.2 QUALITY | No performance baseline, no mutation testing, no dependency audit (the audit part) |
+| 13.2 QUALITY | Nothing checks changes automatically before they are merged: no CI runs the tests or the build |
+| 13.2 QUALITY | Dependencies aren't audited for known vulnerabilities |

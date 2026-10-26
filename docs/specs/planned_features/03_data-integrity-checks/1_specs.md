@@ -92,15 +92,11 @@ records the race without fixing it (decided on 2026-10-23), and adds the baselin
 | `3_specs.md` | Gap |
 | ------------ | --- |
 | 1.7 STORAGE | Two fundamental periods filed on the same day collapse into one record (STORAGE-S06) |
-| 2.6 PROVIDER | The contract checks cover fields and types, not value semantics … (the value-semantics part; the schedule part: `continuous-integration`) |
-| 13.2 QUALITY | No performance baseline, no mutation testing, no dependency audit (the baseline part; the audit part: `continuous-integration`; mutation testing stays with `release-1-0`) |
+| 2.6 PROVIDER | The contract checks cover fields and types, not value semantics (e.g. whether open, high, low and close are split-adjusted) |
+| 13.2 QUALITY | No performance baseline: a regression in requests, statements or run time goes unnoticed |
 
 ## Known gaps changed
 
 | `3_specs.md` | Today | After the merge | Requirement | Closed by |
 | ------------ | ----- | --------------- | ----------- | --------- |
 | 1.7 STORAGE | Back-to-back replacements of two instruments' fundamentals may lose a write (suspected WAL race, not reproduced) | A deletion loses another instrument's write to the same table that QuestDB has acknowledged but not yet applied (STORAGE-S19). A replacement right after another instrument's write to that table loses it. Reproduced on 2026-10-23: always when the deletion followed the write directly, never with a wait in between | COR-1 | `point-in-time-fundamentals` (no deletes) |
-| 5.3 FUND | Replacement is delete-then-write per table: a failed write leaves the table without the symbol's records; a suspected race between the delete and pending writes (STORAGE, section 1.7) | Replacement is delete-then-write per table: a failed write leaves the table without the symbol's records | COR-2 | `point-in-time-fundamentals` |
-
-The FUND row loses its race part: the STORAGE row holds it, since a gap is listed once
-(`3_specs.md`, intro).
