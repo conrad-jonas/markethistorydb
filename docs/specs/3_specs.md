@@ -332,7 +332,7 @@ reference data (REFDATA), then works through its symbols: prices (PRICES), then 
 | --- | ----------- | --------- |
 | An error that ends one pass skips the later passes, even when they could succeed: `fetch --exchange "London Exchange"` runs both daily passes, then fails in the first minute pass with `NoDataError`, since London isn't a minute exchange | ING-15, ING-4 | `ingestion-efficiency` |
 | A failed exchange or symbol list (after its retries) ends the fetch, not just that exchange | ING-4 | `ingestion-efficiency` |
-| The outcome is a log and a count; failed symbols aren't returned to the caller, and "downloaded" doesn't tell stored from up to date | LIB-9, ING-6 | `library-contract` |
+| The run summary counts an up-to-date symbol as downloaded, so it doesn't tell stored from up to date | ING-6 | `library-contract` |
 | No run history and no retry of only the failed symbols. An interrupted fetch isn't resumed: the next fetch starts over with every pass and every symbol, and only the prices pick up where they stopped, because each symbol's price request starts after its newest stored bar (`4_design.md` 8.7) | ING-10, ING-11, ING-16 | `run-tracking` |
 | The storage check looks at the machine running the fetch, not the database host | ING-18 | `ingestion-scale` |
 | The free space required (50 GB), the failures before a stop (20) and the failed symbols in the summary (10) are fixed in the code | OPS-3 | `settings-model` |
@@ -435,7 +435,7 @@ look up stored records (REFDATA, PRICES).
 
 | Gap | Requirement | Closed by |
 | --- | ----------- | --------- |
-| Only the token and the connection settings are configurable; fetch scope (exchanges, venues), thresholds, timeouts and paths are fixed in the code | OPS-3, MKT-9 | `settings-model` |
+| The timeouts of the database connections (10 s) and of the provider requests (10 s to connect, 120 s to read) are fixed in the code | OPS-3 | `settings-model` |
 | Secrets come from environment variables only, not from files | CLD-3 | `settings-model` |
 | No encrypted database connections (TLS) can be configured | CLD-8 | `connection-reuse` |
 | The settings hold one provider's token, as the field `eodhd_api_token`; there are no settings per provider | PRV-3, PRV-8 | `settings-model` |
