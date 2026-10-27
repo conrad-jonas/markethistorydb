@@ -175,17 +175,17 @@ read "not checked" (CI-S09):
 The tolerances hold even though eodhd lowers past adjusted closes a little with every new
 dividend.
 
-**Why AAPL and not NVDA** (10:1 on 2024-06-10, as the round-2 roadmap proposed): the demo token
-serves AAPL.US, but answers 403 for NVDA.US (checked on 2026-10-23). With NVDA, the checks would
-need the account's token, which is refused on most nights.
+**Why AAPL and not NVDA** (10:1 on 2024-06-10, the more recent split): the demo token serves
+AAPL.US, but answers 403 for NVDA.US (checked on 2026-10-23). With NVDA, the checks would need
+the account's token, which is refused on most nights.
 
 ### 4.3 Consequences
 
 - **DG-4:** its precondition is met; the prices are raw. Adjusting on read with raw bars and
   factors stays open for `corporate-actions`, and corporate actions can be fetched
   incrementally.
-- **`price-corrections`:** the overlap check that a split would have triggered "only if prices
-  turn out split-adjusted" (round-2 roadmap 2.9) isn't needed.
+- **`price-corrections`:** it needs no overlap check for splits, which only split-adjusted prices
+  would have called for.
 - **Window boundaries** (`4_design.md` 6.4): eodhd includes both bounds, so the bar at a
   boundary arrives in both windows and is stored once (STORAGE-S05). This answers open
   question 1 of `test-suite-hardening`.
@@ -279,8 +279,6 @@ need the account's token, which is refused on most nights.
 | DG-4 precondition | met: prices are raw | section 4.1 |
 | Baseline | synthetic: a faked fetch against the test database, counts checked, times reported | decided on 2026-10-23: repeatable, free, and a count change shows in the pull request that causes it |
 | Reused tickers | left to `listings-and-universe` | decided on 2026-10-23 |
-
-The decisions are recorded in `6_roadmap.md` in stage 4.
 
 ## 8 Implementation
 

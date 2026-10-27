@@ -53,8 +53,8 @@ the package doesn't own. And nothing checks the code for common security mistake
 | Item | Where | Why |
 | ---- | ----- | --- |
 | Dependencies audited for known vulnerabilities, the other half of QA-11 | `continuous-integration` | CI-S05 |
-| TLS for the database connections (test architecture plan, Phase 6: "once the DB leaves localhost") | `connection-reuse` | CLD-8: the TLS options belong to the database sessions that feature introduces |
-| API keys, TLS and the bind address of the REST API (README ToDo "Check for security issues": API-11 to API-13) | `rest-api` | there is no REST API yet |
+| TLS for the database connections, once the database leaves localhost | `connection-reuse` | CLD-8: the TLS options belong to the database sessions that feature introduces |
+| API keys, TLS and the bind address of the REST API (API-11 to API-13) | `rest-api` | there is no REST API yet |
 | A security review of the whole code beyond the lint rules | `release-1-0` | its scope holds the security review |
 | SQL statements composed with quoted identifiers instead of f-strings | `schema-from-code` | its SQL builder replaces `db/statements/`; until then `S608` is ignored there |
 | A warning when the QuestDB server asks for no login over HTTP or keeps a default password | `library-contract` | its check of the server settings before writing (OPS-5) reads `SHOW PARAMETERS`, which shows both without revealing a password; a warning, not a stop, since a local QuestDB may well run without a login. No requirement covers it yet. |
