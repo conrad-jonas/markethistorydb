@@ -1,7 +1,7 @@
 # test-suite-hardening: specification changes
 
 State: Ready · Milestone: M0, second feature · Kind: change (QUALITY; test cases of most
-chapters) · Requirements: QA-5, QA-6, COR-4, COR-5 · Depends on: `continuous-integration` ·
+chapters) · Requirements: QA-5, QA-6, COR-5 · Depends on: `continuous-integration` ·
 Decisions: taken on 2026-10-22 and 2026-10-23 (`2_design.md`, section 6)
 
 ## Why

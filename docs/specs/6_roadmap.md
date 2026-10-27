@@ -56,10 +56,10 @@ those of section 6.3.
 
 | # | Milestone | Feature | Kind | State | Scope | Requirements | Depends on |
 | - | --------- | ------- | ---- | ----- | ----- | ------------ | ---------- |
-| 1 | M0 | `continuous-integration` | — | Ready | — | COR-17, QA-4, QA-7, QA-11 | — |
-| 2 | M0 | `test-suite-hardening` | — | Ready | — | COR-4, COR-5, QA-5, QA-6 | — |
-| 3 | M0 | `data-integrity-checks` | — | Ready | — | COR-1, COR-17, QA-13 | — |
-| 4 | M0 | `code-hygiene` | — | Ready | — | COR-3, COR-4, COR-12, ING-6, OPS-2, QA-4, QA-14 | — |
+| 1 | M0 | `continuous-integration` | — | Ready | — | QA-4, QA-7, QA-11 | — |
+| 2 | M0 | `test-suite-hardening` | — | Ready | — | COR-5, QA-5, QA-6 | — |
+| 3 | M0 | `data-integrity-checks` | — | Ready | — | COR-17, QA-13 | — |
+| 4 | M0 | `code-hygiene` | — | Ready | — | COR-4, COR-12, OPS-2, QA-14 | — |
 | 5 | M0 | `secret-redaction-hardening` | — | Ready | — | QA-8, QA-11 | — |
 | 6 | M0 | `traceability` | — | Ready | — | QA-16 | — |
 | 7 | M1 | `library-contract` | change | Planned | `__all__`, `__version__`, `py.typed`; docstrings of the public API, *types* required in CI; rejection of timezone-aware datetimes; safe setup (`ensure_schema`, `setup(force)`, CLI `--force`/`--yes`, a declined setup no longer exits 0); check of the server setting `line.auto.create.new.columns` (OPS-5); a fetch result returned to the caller; `Client` as context manager with `close()`; Ctrl+C on the command line sets the stop function. | CMD-2, CMD-3, COR-3, COR-10, COR-11, ING-3, ING-6, LIB-5, LIB-6, LIB-7, LIB-8, LIB-9, LIB-10, OPS-1, OPS-2, OPS-5, QA-4, QA-11, QA-14, QRY-3, QRY-4 | `continuous-integration` |
