@@ -210,6 +210,7 @@ Every requirement of the project, implemented or not.
 | QA-12 | Test doubles shall fail when the real interface they stand in for changes. | Otherwise tests stay green while the code breaks. | Should | Open |
 | QA-13 | Performance (run time, provider requests, connections, memory, read throughput, write amplification) shall be measured against a baseline, and regressions detected. | Scalability needs evidence. | Should | Open |
 | QA-14 | The code shall pass a configured linter and follow a consistent style: naming, logging, no dead code. | Readability and maintainability. | Should | Open |
+| QA-16 | The links between requirements, specifications and tests shall be checked automatically on every change, and a report shall show for each requirement what satisfies and verifies it and what is missing. | Links kept by hand drift apart unnoticed, and a reviewer needs to see what a change does to them. | Should | Open |
 | QA-15 | The strength of the unit tests shall be assessed regularly beyond line coverage. | Coverage shows execution, not checking. | Could | Open |
 
 ## 11 Distribution and open-source project (DIST)
