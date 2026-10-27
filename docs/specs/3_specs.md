@@ -551,3 +551,4 @@ it guarantees.
 | Dependencies aren't audited for known vulnerabilities | QA-11 | `continuous-integration` |
 | No performance baseline: a regression in requests, statements or run time goes unnoticed | QA-13 | `data-integrity-checks` |
 | No performance targets, and no mutation testing | QA-13, QA-15 | `release-1-0` |
+| Nothing checks the links between requirements, specification items and test cases, and no report shows them | QA-16 | `traceability` |
