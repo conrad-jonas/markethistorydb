@@ -280,8 +280,6 @@ the account's token, which is refused on most nights.
 | Baseline | synthetic: a faked fetch against the test database, counts checked, times reported | decided on 2026-10-23: repeatable, free, and a count change shows in the pull request that causes it |
 | Reused tickers | left to `listings-and-universe` | decided on 2026-10-23 |
 
-The decisions are recorded in `6_roadmap.md` in stage 4.
-
 ## 8 Implementation
 
 | # | Issue | Covers |

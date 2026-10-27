@@ -382,8 +382,6 @@ Client.fetch
 | Deletion from another table | `ValueError`, before any statement | decided on 2026-10-24: a programming error, not a database failure |
 | Failed update | `InsertError`, as for an insert | decided on 2026-10-24: a failed write is an `InsertError`, a failed read a `QueryError` |
 
-The decisions are recorded in `6_roadmap.md` in stage 4.
-
 ## 12 Implementation
 
 | # | Issue | Covers |

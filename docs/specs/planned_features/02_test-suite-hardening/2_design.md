@@ -284,11 +284,9 @@ What this feature leaves undone, and where it goes:
 | Faster resets | dropped | decided on 2026-10-22: gain mostly local, against apply-waits and a second reset path |
 | Missing test cases whose behaviour a later feature changes | left to that feature | decided on 2026-10-22: written now, they would be rewritten soon after |
 | Daily bar without volume | fixed in `code-hygiene` | decided on 2026-10-22: this feature changes no file under `src/` |
-| Trace script and `spec` markers | a feature of its own, entered in stage 4 | decided on 2026-10-22: it changes how "Implemented by" is maintained |
+| Trace script and `spec` markers | a feature of its own, `traceability` | decided on 2026-10-22: it changes how "Implemented by" is maintained |
 | Local smoke test of the console script | none; CI-T05 covers the installed command | past the argument parsing it would reach the application's database through `.env` (`1_specs.md`, Scope) |
 | Checking the rules of the suite | once by hand, in issue 1; no test | decided on 2026-10-23: the configuration implements them, as it does QUALITY-T01, T02 and T04; a change shows in the diff of `pyproject.toml` (section 5) |
-
-The decisions are recorded in `6_roadmap.md` in stage 4.
 
 ## 7 Implementation
 

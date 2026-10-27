@@ -283,8 +283,6 @@ instead of dropping, stay with `test-suite-hardening`.
 | Audit tool | `pip-audit` on the exported lock | reads a requirements file, uses PyPI's advisory data; no account needed |
 | Pinning of the GitHub actions | full commit SHA, Dependabot for updates | a tag can be moved to other code, a SHA can't (section 6) |
 
-The decisions are recorded in `6_roadmap.md` in stage 4.
-
 ## 8 Implementation
 
 Like every planned feature, this one is split into GitHub issues, one branch and one pull request

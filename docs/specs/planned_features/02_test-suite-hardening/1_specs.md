@@ -50,7 +50,7 @@ behaviour that stays as it is. M0 is the safety net for the refactorings of M2
 - **The fix for a daily bar without volume** (found while writing this feature; known gap added
   below): `code-hygiene`, next to the other fix for COR-4 there.
 - **The trace script in `scripts/` and `spec` markers on the tests** (`1_constitution.md` 6.6):
-  a feature of its own, entered in stage 4.
+  `traceability`.
 - **Test doubles checked against their interfaces, seams instead of patched private names**
   (QA-12; testing rules 4 and 6): `testable-core`.
 
