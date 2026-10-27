@@ -52,9 +52,8 @@ records the race without fixing it (decided on 2026-10-23), and adds the baselin
   received and relies on none of them. No feature takes them up until `provider-interface` maps
   fields to concepts.
 - **The dependency audit and mutation testing,** which the shared gap row of `3_specs.md` 13.2
-  also names: `continuous-integration` (QA-11) and `release-1-0` (QA-15). The backlog's
-  requirement list for this feature named QA-11, QA-15 and COR-2. COR-2, the failed write after
-  the deletion, stays with `point-in-time-fundamentals`.
+  also names: `continuous-integration` (QA-11) and `release-1-0` (QA-15). COR-2, the failed
+  write after the deletion, stays with `point-in-time-fundamentals`.
 - **Existing databases:** none holds data worth keeping (2026-10-23), so the key change needs no
   migration. `setup` creates the tables with the new keys.
 

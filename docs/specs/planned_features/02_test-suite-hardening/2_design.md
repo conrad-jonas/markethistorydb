@@ -269,8 +269,8 @@ What this feature leaves undone, and where it goes:
 | ---- | ----- | --- |
 | Faster resets of the integration tables | nowhere: dropped on 2026-10-22 | `1_specs.md`, Scope |
 | Tests of the rules of the suite themselves (QUALITY-S05 to S09), e.g. with `pytester` | nowhere: dropped on 2026-10-23 | Each rule is one setting of pytest or of a maintained plugin. Issue 1 checks each rule once by hand: a test with an unknown marker, one raising a warning, one sleeping past its limit, a unit test creating a socket. After that, a change to a setting shows in the `pyproject.toml` diff of its pull request. The configuration implements QUALITY-T01, T02 and T04 in the same way. |
-| Splitting `assert a and b` (44 such asserts; round-2 roadmap, Appendix A, M0) | nowhere: dropped | pytest's assertion rewriting reports the failing operand with its values (checked on 2026-10-22), so such a failure is not ambiguous |
-| Moving `load_payload` from `tests/fakes.py` to `tests/support/` (same source) | `testable-core` (M2) | that feature reorganises the doubles of `tests/fakes.py`; moving it now would move it twice |
+| Splitting `assert a and b` (44 such asserts) | nowhere: dropped | pytest's assertion rewriting reports the failing operand with its values (checked on 2026-10-22), so such a failure is not ambiguous |
+| Moving `load_payload` from `tests/fakes.py` to `tests/support/` | `testable-core` (M2) | that feature reorganises the doubles of `tests/fakes.py`; moving it now would move it twice |
 
 ## 6 Decisions
 

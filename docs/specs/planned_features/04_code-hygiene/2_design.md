@@ -305,7 +305,7 @@ Client.fetch
 
 ## 9 Smaller deduplications
 
-- **`PRICE_TABLE_BY_TIME_FRAME`** (Architecture plan 1.3).
+- **`PRICE_TABLE_BY_TIME_FRAME`**.
   - **Today, four branches pick names by time frame:**
     - `Read.ohlcv` and `Read.newest_of_ohlcv` each start with `if time_frame ==
       TimeFrame.DAILY: … else: …`, which picks four values: the statement, the column names,
@@ -349,9 +349,8 @@ Client.fetch
     so it needs no new test case.
   - What the request, download and write classes do differently per time frame (one request or
     windows, the timestamp unit) stays as it is: `testable-core` (`4_design.md` 6.7).
-- **`EXCHANGE_URL_CODE = "exchange_url_code"`** in `fetch/utils.py` (Architecture plan 1.8):
-  `DownloadSymbolData`, `RequestPriceData` and `RequestFundamentalData` use it instead of the
-  literal.
+- **`EXCHANGE_URL_CODE = "exchange_url_code"`** in `fetch/utils.py`: `DownloadSymbolData`,
+  `RequestPriceData` and `RequestFundamentalData` use it instead of the literal.
 - **`TABLE_NAMES_EXCHANGE`:** `TABLES_NAMES_EXCHANGE` is renamed, to match the other three groups.
 
 ## 10 Not done
@@ -363,10 +362,10 @@ Client.fetch
 | Security rules (`S`) | `secret-redaction-hardening` | QA-11 |
 | Docstring rules (`D`) | nowhere: not used | `D401` demands the imperative mood, against the project's third-person convention. `library-contract` documents the public API. |
 | A check for unused functions and classes (e.g. vulture) | nowhere: dropped | ruff finds unused imports and variables only. Code kept alive by its own tests, as here, needs a review either way, and such a tool would need a whitelist for the column constants that the code reads through `ALL_COLUMNS`. |
-| pre-commit hooks (Library readiness 10: "optional") | nowhere: dropped | *lint* checks every pull request; a local hook is each developer's own choice |
-| Symbol and exchange as arguments of `WriteFundamentalData` (Architecture plan 1.6) | `testable-core` | `4_design.md` 7.5: testing rule 2 applies to every writer and request class |
-| The time-frame branches of the request, download and write classes (Architecture plan 1.3, beyond the table lookup) | `testable-core` | `4_design.md` 6.7 |
-| `ErrorCode` moved to `cli.py`, a real prompt and `--yes` (Architecture plan 1.9, 1.10) | `library-contract` | part of that feature's safe setup and command line (COR-3, CMD-2) |
+| pre-commit hooks | nowhere: dropped | *lint* checks every pull request; a local hook is each developer's own choice |
+| Symbol and exchange as arguments of `WriteFundamentalData` | `testable-core` | `4_design.md` 7.5: testing rule 2 applies to every writer and request class |
+| The time-frame branches of the request, download and write classes (beyond the table lookup) | `testable-core` | `4_design.md` 6.7 |
+| `ErrorCode` moved to `cli.py`, a real prompt and `--yes` | `library-contract` | part of that feature's safe setup and command line (COR-3, CMD-2) |
 | Reusing the database connections | `connection-reuse` | OPS-2, database side |
 | Import rules | `target-architecture` | DG-1 settles the package layout first |
 

@@ -276,7 +276,7 @@ instead of dropping, stay with `test-suite-hardening`.
 | Decision | Choice | Reason |
 | -------- | ------ | ------ |
 | Repository visibility | public from the start | unlimited free Actions minutes; the license follows in `publishing-readiness` |
-| DG-9 (decision gate of the round-2 roadmap: lock file and Python versions), lock file | `uv.lock` tracked | reproducible CI; library users still resolve against the ranges of `pyproject.toml` |
+| DG-9 (decision gate of `6_roadmap.md`: lock file and Python versions), lock file | `uv.lock` tracked | reproducible CI; library users still resolve against the ranges of `pyproject.toml` |
 | DG-9, Python versions | 3.12 and the newest stable release | covers the supported range at half the cost of every version |
 | Integration database | testcontainers, override kept | same behaviour on any machine with Docker and in CI; the override keeps machines without Docker working |
 | Live tests | nightly with the token, refusals shown as "not checked" | provider changes are noticed within a day; a refused account must read neither as a failure nor as a pass |
