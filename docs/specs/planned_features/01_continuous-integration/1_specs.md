@@ -1,7 +1,7 @@
 # continuous-integration: specification changes
 
 State: Ready · Milestone: M0, first feature · Kind: new (capability CI) · Requirements: QA-4,
-QA-7, QA-11, COR-17 · Depends on: none · Decisions: DG-9 (lock file and Python versions) and the
+QA-7, QA-11 · Depends on: none · Decisions: DG-9 (lock file and Python versions) and the
 repository's visibility, decided on 2026-10-19 (`2_design.md`, section 7)
 
 ## Why

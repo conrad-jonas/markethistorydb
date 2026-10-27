@@ -1,7 +1,7 @@
 # data-integrity-checks: specification changes
 
 State: Ready · Milestone: M0, third feature · Kind: change (STORAGE, PROVIDER, QUALITY) ·
-Requirements: COR-1, COR-17, QA-13 · Depends on: `continuous-integration`,
+Requirements: COR-17, QA-13 · Depends on: `continuous-integration`,
 `test-suite-hardening` · Decisions: taken on 2026-10-23 (`2_design.md`, section 7)
 
 ## Why

@@ -1,7 +1,7 @@
 # code-hygiene: specification changes
 
 State: Ready · Milestone: M0, fourth feature · Kind: change (STORAGE, PROVIDER, PRICES, FUND,
-QUALITY, CI) · Requirements: COR-3, COR-4, COR-12, ING-6, OPS-2, QA-4, QA-14 · Depends on:
+QUALITY, CI) · Requirements: COR-4, COR-12, OPS-2, QA-14 · Depends on:
 `continuous-integration`; builds on the text of `test-suite-hardening` (STORAGE-S22, T36) and
 `data-integrity-checks` (STORAGE-S19) · Decisions: taken on 2026-10-24 (`2_design.md`, section 11)
 
