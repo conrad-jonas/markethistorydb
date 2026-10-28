@@ -19,6 +19,7 @@ the data source of a trading backtester.
 | G3 | Offer a REST API for reading data and running fetch jobs | long-term goal |
 | G4 | Allow the data provider to be replaced, and several providers to serve disjoint data (e.g. prices from one, fundamentals from another) | architectural constraint, not built yet |
 | G5 | Be ready to run in the cloud | architectural constraint, not built yet |
+| G6 | Allow live bars to be added later: delivered to clients during the trading session, through the same processing as the history | architectural constraint, not built yet |
 
 **Users:**
 
@@ -38,10 +39,12 @@ years) and deep histories of a few instruments (e.g. minute bars over years).
 - **Merging data from several providers.** A series, e.g. an instrument's daily bars or its
   fundamentals, always comes from exactly one provider: no fallback between providers, no
   stitching, no precedence rules. Several providers serving disjoint data is an architectural
-  constraint (G4), not a non-goal.
+  constraint (G4), not a non-goal. One exception: a read may present an instrument's historical
+  series followed by its live series, joined at a boundary the system determines. Each bar keeps
+  its series and provider, and nothing joined is stored.
 - Deployment artifacts for a specific platform (Helm charts, Terraform, vendor services). Cloud
   readiness stays architectural.
-- Real-time or streaming market data, and order execution.
+- Order execution. Live market data is an architectural constraint (G6), not a non-goal.
 - Data migrations before 1.0. A refetch is acceptable.
 
 ## 3 Design principles
@@ -347,6 +350,7 @@ order. A feature may correct the files of a Ready feature, in a commit of its ow
 | **Designated timestamp** | The QuestDB column a table is sorted and partitioned by. Time-series features such as resampling and as-of joins need it. |
 | **Discovery** | Finding out what the database holds: which exchanges, instruments and time ranges. |
 | **Epic** | A planned feature seen as a unit of work; it is split into GitHub issues. |
+| **Feed** | The channel through which a provider delivers a series, e.g. eodhd's historical REST endpoint or its live WebSocket stream. One provider can have several feeds, and their data can differ, e.g. one trading venue instead of all. |
 | **FILL** | An option of QuestDB's resampling for buckets without data: leave them out (`NONE`), emit nulls (`NULL`), repeat the previous value (`PREV`), interpolate (`LINEAR`) or write a constant. |
 | **ILP / QWP** | *ILP* (InfluxDB Line Protocol) is the ingestion protocol the code uses today. *QWP* is QuestDB's newer protocol over WebSocket, used by the current Python client for both ingestion and queries. |
 | **Instrument** | A tradable listing, identified as symbol plus exchange, e.g. `AAPL.XNAS`. Today's code calls it a *symbol*. |
