@@ -34,6 +34,7 @@ Every requirement of the project, implemented or not.
 | 11 | Distribution and open-source project | DIST | How the package is published, versioned and documented. |
 | 12 | Provider independence | PRV | Architectural: providers can be replaced, and several can serve disjoint data. |
 | 13 | Cloud readiness | CLD | Architectural: the system can run in containers and cloud platforms. |
+| 14 | Live data | LIVE | Architectural: live bars can be added later, through the same processing as the history. |
 
 ---
 
@@ -187,7 +188,7 @@ Every requirement of the project, implemented or not.
 | ID | Requirement | Rationale | Prio | Status |
 | -- | ----------- | --------- | ---- | ------ |
 | OPS-1 | Preparing the database for use shall be repeatable without side effects, so that it can be done on every start. | Services start often; preparation must be safe each time. | Must | Open |
-| OPS-2 | Connections to the database and the providers shall be reused within a client or run, not opened per operation. | Per-operation connections cost time and trigger server warnings. | Must | Open |
+| OPS-2 | Connections to the database and the providers shall be reused within a client, run or long-running process, not opened per operation. | Per-operation connections cost time and trigger server warnings. | Must | Open |
 | OPS-3 | Everything that may differ between installations (connections, providers, fetch scope, thresholds, paths) shall be configurable without code changes. | Other people run their own instance with other needs. | Should | Partial: connections are configurable; fetch scope and thresholds are fixed in the code |
 | OPS-4 | Runs started from the command line shall leave a log that outlasts the session, limited in size. | Long runs need a record to look back at, without filling the disk. | Should | Done |
 | OPS-5 | Before writing, the system shall check that the database runs with the configuration the system depends on, and stop with an explanation otherwise. | A misconfigured database would silently accept structural changes the system is meant to reject (COR-6). | Should | Open |
@@ -247,8 +248,18 @@ Every requirement of the project, implemented or not.
 | CLD-1 | Processes shall keep no state on local disk that is needed after a restart. | Containers lose their local disk. | Arch | Done: a run keeps no state of its own, and the next run works from the database alone; only the log file is written locally (RUNS-S13) |
 | CLD-2 | File locations shall be configurable as local directories or object storage. | Cloud deployments store files in object storage. | Arch | Open |
 | CLD-3 | All settings shall be suppliable through environment variables, secrets also through files, with no hard-coded paths. | Twelve-factor configuration. | Arch | Partial: connections and secrets come from environment variables |
-| CLD-4 | API server, ingestion worker and one-off commands shall be startable and scalable separately, from one package. | Each role scales and restarts on its own. | Arch | Open |
+| CLD-4 | API server, ingestion worker, further long-running roles and one-off commands shall be startable and scalable separately, from one package. | Each role scales and restarts on its own. | Arch | Open |
 | CLD-5 | Logs shall be writable to standard output, optionally in a structured format. | Platforms collect standard output. | Arch | Partial: the CLI logs to standard output and a file; no structured format |
 | CLD-6 | Processes shall stop gracefully on a termination signal, leaving interrupted work resumable. | Platforms stop processes with signals. | Arch | Partial: Ctrl+C is handled; termination signals are not |
 | CLD-7 | Basic operational metrics shall be exposed. | Operators need visibility. | Arch | Open |
 | CLD-8 | The database shall be usable on another host, with encrypted connections, timeouts and retries; nothing shall assume it runs on the same host. | The database often runs elsewhere. | Arch | Partial: host, timeouts and retries are configurable; no encryption; the storage check assumes the same host |
+
+## 14 Live data (LIVE)
+
+| ID | Requirement | Rationale | Prio | Status |
+| -- | ----------- | --------- | ---- | ------ |
+| LIVE-1 | Provider data shall be turned into the system's own records by the same implementation, whether it arrives in a fetch run or continuously during a trading session. | Processed differently, live and historical data would make backtests and live trading diverge. | Arch | Open |
+| LIVE-2 | A provider's capabilities shall be able to include data it delivers continuously, with its limits, e.g. the number of instruments at once. | Live feeds come with their own limits, which every use of the provider account must respect together. | Arch | Open |
+| LIVE-3 | A bar shall be able to carry whether it is provisional (its values may still change, because its interval has not ended) or final, its revision, whether the provider or the system built it, and when it was received. | A live bar changes until its interval has ended; comparing live with historical bars needs their origin and time of receipt. | Arch | Open |
+| LIVE-4 | Bars of an instrument and interval from another feed, such as a live feed, shall be storable as a series of their own, never merged with or overwriting the historical series, and readable with the same queries, the series chosen by the caller. | A live feed may differ from the historical data (e.g. one venue instead of all), and a later fetch must not overwrite the record of what was received live. | Arch | Open |
+| LIVE-5 | Bars aggregated to coarser intervals shall follow the same rules for historical and for live bars. | Two sets of rules would let the same strategy see different bars in backtests and live. | Arch | Open |
