@@ -129,8 +129,8 @@ src/markethistorydb/
 - The unit tests keep 100 % line and branch coverage.
 - Every change to the database path has an integration test.
 - Docstrings follow the project conventions: reStructuredText field lists, third person
-  singular, documented `:raises:`. Today they are written down in the local `CLAUDE.md`; they
-  move to `CONTRIBUTING.md` with `publishing-readiness`.
+  singular, documented `:raises:`. Today they are written down in `.claude/rules/docstrings.md`;
+  they move to `CONTRIBUTING.md` with `publishing-readiness`.
 - The README and the user docs are updated in the same change whenever behaviour, CLI or schema
   change.
 - The specification documents are updated, and a completed planned feature is merged into the
@@ -144,7 +144,9 @@ src/markethistorydb/
   with `git merge --no-ff`.
 - Once the repository is on GitHub, every branch is merged through a pull request, and each
   pull request implements one GitHub issue.
-- `CLAUDE.md` and `.claude/` stay untracked (`.git/info/exclude`).
+- `CLAUDE.md` and `.claude/rules/` are tracked: they hold the instructions for coding agents that
+  apply to every contributor. Personal instructions go to `CLAUDE.local.md` and personal settings
+  stay in `.claude/`; both are ignored (`.gitignore`).
 
 ## 6 Specification process
 
