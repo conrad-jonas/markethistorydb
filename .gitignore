@@ -15,3 +15,6 @@ uv.lock
 questdb-instances.local.md
 docs/*
 !docs/specs/
+CLAUDE.local.md
+.claude/*
+!.claude/rules/
