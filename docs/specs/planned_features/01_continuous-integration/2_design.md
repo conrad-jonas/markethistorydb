@@ -285,17 +285,21 @@ instead of dropping, stay with `test-suite-hardening`.
 
 ## 8 Implementation
 
-Like every planned feature, this one is split into GitHub issues, one branch and one pull request
-each (`1_constitution.md` 6.3, step 4). Proposed issues, in this order:
+Like every planned feature, this one is split into issues, one branch each (`1_constitution.md`
+6.3, step 4). Issues 1 to 4 come before the repository exists or create it, so none of them is a
+GitHub issue: the branches of 1 to 3 are merged locally with `--no-ff` (`1_constitution.md`
+5.3), and 4 is settings on GitHub. From issue 5 on, each issue is a GitHub issue with one pull
+request. Proposed issues, in this order:
 
 | # | Issue | Pull request |
 | - | ----- | ------------ |
-| 1 | Track `uv.lock` | yes |
-| 2 | Container fixture, with the unit tests of `choose_test_database`; testcontainers as dev dependency | yes |
-| 3 | `ci.yml`, `dependabot.yml`, pyright as dev dependency | yes |
+| 1 | Track `uv.lock` | no: merged locally |
+| 2 | Container fixture, with the unit tests of `choose_test_database`; testcontainers as dev dependency | no: merged locally |
+| 3 | `ci.yml`, `dependabot.yml`, pyright as dev dependency | no: merged locally |
 | 4 | Create the repository, push `main` and `v0.1.0`; ruleset; environment `nightly` with the secret | no: settings on GitHub; the first run of `ci.yml` starts with the push |
 | 5 | `nightly.yml` and `live_summary.py` with its unit tests; one manual run | yes |
 | 6 | Demonstration pull requests for the *ci* test cases (a failing test, coverage below 100 %, an outdated lock, a vulnerable pin), closed without merging | yes, not merged |
+| 7 | The merge into the global files (`1_constitution.md` 6.4): this feature's specification, design and test changes, with the *ci* test cases Implemented by the demonstration pull requests of issue 6 and the runs of issues 4 and 5 | yes |
 
 Issues 1 to 3 are done before the repository exists, so its first push already carries CI. The
 ruleset chooses required checks by job name, which GitHub knows only after a first run; hence the
@@ -303,8 +307,7 @@ ruleset comes after the push.
 
 ## 9 Open questions
 
-- **Docker tag:** whether `questdb/questdb:10.0.1` is the exact tag name on Docker Hub; check in
-  issue 2.
+- **Docker tag:** answered on 2026-11-01: the tag `questdb/questdb:10.0.1` exists on Docker Hub.
 - **Account status first?** eodhd has an endpoint for the account's status (calls left,
   subscription). Asking it first would let the summary say why the account is refused before the
   tests run. Whether that request itself counts against the quota is unknown; check in issue 5,

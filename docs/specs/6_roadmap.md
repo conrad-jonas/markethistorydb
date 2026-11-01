@@ -56,7 +56,7 @@ those of section 6.3.
 
 | # | Milestone | Feature | Kind | State | Scope | Requirements | Depends on |
 | - | --------- | ------- | ---- | ----- | ----- | ------------ | ---------- |
-| 1 | M0 | `continuous-integration` | — | Ready | — | QA-4, QA-7, QA-11 | — |
+| 1 | M0 | `continuous-integration` | — | In progress | — | QA-4, QA-7, QA-11 | — |
 | 2 | M0 | `test-suite-hardening` | — | Ready | — | COR-5, QA-5, QA-6 | — |
 | 3 | M0 | `data-integrity-checks` | — | Ready | — | COR-17, QA-13 | — |
 | 4 | M0 | `code-hygiene` | — | Ready | — | COR-4, COR-12, OPS-2, QA-14 | — |
