@@ -307,8 +307,7 @@ ruleset comes after the push.
 
 ## 9 Open questions
 
-- **Docker tag:** whether `questdb/questdb:10.0.1` is the exact tag name on Docker Hub; check in
-  issue 2.
+- **Docker tag:** answered on 2026-11-01: the tag `questdb/questdb:10.0.1` exists on Docker Hub.
 - **Account status first?** eodhd has an endpoint for the account's status (calls left,
   subscription). Asking it first would let the summary say why the account is refused before the
   tests run. Whether that request itself counts against the quota is unknown; check in issue 5,
