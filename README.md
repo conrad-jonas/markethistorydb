@@ -182,12 +182,19 @@ unset, or if eodhd.com refuses it: rejected (401), out of calls (402), or the pl
 the endpoint (403). On a failure, adapt the request layer and tables to the new shape, then
 refresh the sample payload.
 
-`tests/integration` runs against a real QuestDB and **drops and recreates every table**. It
-only runs against the instance named by `QUESTDB_TEST_HOST`, `QUESTDB_TEST_PG_PORT` and
-`QUESTDB_TEST_HTTP_PORT` (plus `QUESTDB_TEST_USER`/`QUESTDB_TEST_PASSWORD`, see
-`.env.example`), is skipped while those are unset, and refuses to run if they point at the
-instance the `QUESTDB_*` variables configure. Start a second QuestDB with its own data
-directory and ports for it, e.g. with a `server.conf` holding
-`http.bind.to=127.0.0.1:19000`, `pg.net.bind.to=127.0.0.1:18812`,
-`line.tcp.net.bind.to=127.0.0.1:19009` and `http.min.net.bind.to=127.0.0.1:19003`, plus
-`line.auto.create.new.columns=false` as in production (the test for it is skipped otherwise).
+`tests/integration` runs against a real QuestDB and **drops and recreates every table**, so it
+only runs against a throwaway instance:
+
+- **Your own instance,** named by `QUESTDB_TEST_HOST`, `QUESTDB_TEST_PG_PORT` and
+  `QUESTDB_TEST_HTTP_PORT` (plus `QUESTDB_TEST_USER`/`QUESTDB_TEST_PASSWORD`, see
+  `.env.example`). The tests refuse to run if these point at the instance the `QUESTDB_*`
+  variables configure. Start a second QuestDB with its own data directory and ports for it, e.g.
+  with a `server.conf` holding `http.bind.to=127.0.0.1:19000`, `pg.net.bind.to=127.0.0.1:18812`,
+  `line.tcp.net.bind.to=127.0.0.1:19009` and `http.min.net.bind.to=127.0.0.1:19003`, plus
+  `line.auto.create.new.columns=false` as in production (the test for it is skipped otherwise).
+- **A container,** when those variables are unset and Docker answers: the tests start QuestDB
+  10.0.1 through testcontainers, with `line.auto.create.new.columns=false`, and remove it after
+  the run. `QUESTDB_TEST_IMAGE` names another image, e.g. `questdb/questdb:latest`. On Windows,
+  Docker Desktop needs Linux containers.
+
+With neither, the integration tests are skipped.
