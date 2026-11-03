@@ -1,13 +1,14 @@
 """
 Fixtures for the integration tests, which run against a real QuestDB.
 
-Every test here drops and recreates all tables, so they only run against a throwaway instance
-named by the QUESTDB_TEST_* variables (in the environment or in .env), and refuse to run if that
-instance is the one the QUESTDB_* variables point the application to. Without the variables, or
-with the instance unreachable, the tests are skipped.
+Every test here drops and recreates all tables, so they only run against a throwaway instance:
+the one named by the QUESTDB_TEST_* variables (in the environment or in .env), or else a QuestDB
+container started for the session if Docker answers. They refuse to run if the named instance is
+the one the QUESTDB_* variables point the application to. With neither, or with the named
+instance unreachable, the tests are skipped.
 """
 
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Mapping
 from pathlib import Path
 from typing import Any
 import os
@@ -16,17 +17,31 @@ import time
 
 import psycopg as pg
 import pytest
+from docker.errors import DockerException
 from dotenv import dotenv_values
 from psycopg import sql
+from testcontainers.core.container import DockerContainer
+from testcontainers.core.docker_client import DockerClient
 
 from markethistorydb.config import Config
 from markethistorydb.db import Database
 from markethistorydb.setup import setup
+from tests.integration_support.database_choice import (
+    Container,
+    Override,
+    Skip,
+    choose_test_database,
+)
 
 _DIRPATH_INTEGRATION_TESTS = Path(__file__).resolve().parent
 _FILEPATH_DOTENV = _DIRPATH_INTEGRATION_TESTS.parents[1] / ".env"
 # Seconds to wait for the test instance to accept a connection before skipping
 _CONNECT_TIMEOUT_IN_SECS = 2
+# Seconds to wait for a freshly started container to answer SQL before failing
+_CONTAINER_START_TIMEOUT_IN_SECS = 60
+# Ports QuestDB listens on inside its container: PostgreSQL wire protocol and HTTP
+_CONTAINER_PG_PORT = 8812
+_CONTAINER_HTTP_PORT = 9000
 # Seconds to wait for a WAL table to apply a write before failing
 _WAL_APPLY_TIMEOUT_IN_SECS = 15
 
@@ -43,17 +58,31 @@ def pytest_collection_modifyitems(items: list[pytest.Item]):
             item.add_marker(pytest.mark.integration)
 
 
-def _setting(name: str, default: str | None = None) -> str | None:
+def _environment() -> dict[str, str]:
     """
-    Reads a setting from the environment, falling back to .env without loading it wholesale.
+    Reads the variables of .env, overridden by those of the environment, without loading .env
+    into the environment.
 
-    :param name: Name of the variable
-    :param default: Value returned when the variable is set nowhere
-    :return: Value of the variable, or *default*
+    :return: Values by variable name
     """
-    if name in os.environ:
-        return os.environ[name]
-    return dotenv_values(_FILEPATH_DOTENV).get(name, default) if _FILEPATH_DOTENV.exists() else default
+    dotenv = dotenv_values(_FILEPATH_DOTENV) if _FILEPATH_DOTENV.exists() else {}
+    return {**{name: value for name, value in dotenv.items() if value is not None}, **os.environ}
+
+
+def _docker_available() -> bool:
+    """
+    Tells whether a Docker daemon answers, so that the tests can start their own QuestDB. Without
+    Docker, creating the client fails at once.
+
+    :return: True if the daemon answered
+    """
+    try:
+        client = DockerClient().client
+        client.ping()
+        client.close()
+    except DockerException:
+        return False
+    return True
 
 
 def _address(host: str, port: str | int) -> tuple[str, int]:
@@ -70,38 +99,92 @@ def _address(host: str, port: str | int) -> tuple[str, int]:
         return host, int(port)
 
 
-@pytest.fixture(scope="session")
-def questdb_config() -> Config:
+def _override_config(choice: Override, environment: Mapping[str, str]) -> Config:
     """
-    Builds the config of the throwaway test instance, after making sure it is one.
+    Builds the config of the instance the QUESTDB_TEST_* variables name, after making sure it is a
+    throwaway one.
 
-    :return: Config pointing at the instance the QUESTDB_TEST_* variables name
+    :param choice: The named instance
+    :param environment: Variables of the environment, over those of .env, which also locate the
+        application's instance
+    :return: Config pointing at the named instance
     """
-    host = _setting("QUESTDB_TEST_HOST")
-    pg_port = _setting("QUESTDB_TEST_PG_PORT")
-    http_port = _setting("QUESTDB_TEST_HTTP_PORT")
-    if not (host and pg_port and http_port):
-        pytest.skip("QUESTDB_TEST_HOST, QUESTDB_TEST_PG_PORT and QUESTDB_TEST_HTTP_PORT are not set")
-
-    app_host = _setting("QUESTDB_HOST", "127.0.0.1")
-    test_addresses = {_address(host, pg_port), _address(host, http_port)}
-    app_addresses = {_address(app_host, _setting("QUESTDB_PG_PORT", "8812")),
-                     _address(app_host, _setting("QUESTDB_HTTP_PORT", "9000"))}
-    if test_addresses & app_addresses:
+    app_host = environment.get("QUESTDB_HOST", "127.0.0.1")
+    test_addresses = {_address(choice.host, choice.pg_port), _address(choice.host, choice.http_port)}
+    app_addresses = {_address(app_host, environment.get("QUESTDB_PG_PORT", "8812")),
+                     _address(app_host, environment.get("QUESTDB_HTTP_PORT", "9000"))}
+    if shared := sorted(test_addresses & app_addresses):
         pytest.exit("Refusing to run the integration tests: QUESTDB_TEST_* points at the QuestDB "
-                    "the application uses ({0}), and the tests drop every table. Start a separate "
-                    "instance with its own data directory and ports.".format(
-                        sorted(test_addresses & app_addresses)), returncode=3)
+                    f"the application uses ({shared}), and the tests drop every table. Start a "
+                    "separate instance with its own data directory and ports.", returncode=3)
 
-    config = Config(eodhd_api_token="integration-test-token",
-                    questdb_password=_setting("QUESTDB_TEST_PASSWORD", "quest"),
-                    questdb_host=host, questdb_pg_port=int(pg_port), questdb_http_port=int(http_port),
-                    questdb_user=_setting("QUESTDB_TEST_USER", "admin"))
+    config = Config(eodhd_api_token="integration-test-token", questdb_password=choice.password,
+                    questdb_host=choice.host, questdb_pg_port=choice.pg_port,
+                    questdb_http_port=choice.http_port, questdb_user=choice.user)
     try:
         pg.connect(config.psycopg_conninfo, connect_timeout=_CONNECT_TIMEOUT_IN_SECS).close()
     except pg.Error as error:
-        pytest.skip("Test QuestDB at {0}:{1} is not reachable: {2}".format(host, pg_port, error))
+        pytest.skip(f"Test QuestDB at {choice.host}:{choice.pg_port} is not reachable: {error}")
     return config
+
+
+def _wait_for_sql(config: Config):
+    """
+    Waits until a freshly started QuestDB answers SQL.
+
+    :param config: Config pointing at the instance
+    :raises TimeoutError: If it doesn't answer within _CONTAINER_START_TIMEOUT_IN_SECS
+    """
+    deadline = time.monotonic() + _CONTAINER_START_TIMEOUT_IN_SECS
+    while True:
+        try:
+            with pg.connect(config.psycopg_conninfo, connect_timeout=_CONNECT_TIMEOUT_IN_SECS) as connection:
+                connection.execute("SELECT 1")
+            return
+        except pg.Error as error:
+            if time.monotonic() > deadline:
+                raise TimeoutError("The QuestDB container did not answer SQL within "
+                                   f"{_CONTAINER_START_TIMEOUT_IN_SECS} s: {error}") from error
+            time.sleep(0.5)
+
+
+def _container_config(choice: Container) -> Iterator[Config]:
+    """
+    Starts QuestDB as a container for the session, with line.auto.create.new.columns=false as in
+    production, and removes the container afterwards.
+
+    :param choice: The container to start
+    :return: Config pointing at the container, once it answers SQL
+    """
+    container = (DockerContainer(choice.image)
+                 .with_env("QDB_LINE_AUTO_CREATE_NEW_COLUMNS", "false")
+                 .with_exposed_ports(_CONTAINER_PG_PORT, _CONTAINER_HTTP_PORT))
+    with container:
+        config = Config(eodhd_api_token="integration-test-token", questdb_password="quest",
+                        questdb_host=container.get_container_host_ip(),
+                        questdb_pg_port=container.get_exposed_port(_CONTAINER_PG_PORT),
+                        questdb_http_port=container.get_exposed_port(_CONTAINER_HTTP_PORT),
+                        questdb_user="admin")
+        _wait_for_sql(config)
+        yield config
+
+
+@pytest.fixture(scope="session")
+def questdb_config() -> Iterator[Config]:
+    """
+    Builds the config of a throwaway QuestDB for the session: the instance the QUESTDB_TEST_*
+    variables name, or else a container started for the session.
+
+    :return: Config pointing at the test instance
+    """
+    environment = _environment()
+    choice = choose_test_database(environment, _docker_available())
+    if isinstance(choice, Skip):
+        pytest.skip(choice.message)
+    if isinstance(choice, Override):
+        yield _override_config(choice, environment)
+    else:
+        yield from _container_config(choice)
 
 
 @pytest.fixture

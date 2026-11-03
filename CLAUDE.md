@@ -22,7 +22,8 @@ The project is managed with uv. Never call `python` or `pip` directly.
 - `uv run pytest -m unit --cov`: unit tests; fails below 100 % line and branch coverage.
 - `uv run pytest -m integration`: integration tests against a throwaway QuestDB named by
   `QUESTDB_TEST_HOST`, `QUESTDB_TEST_PG_PORT` and `QUESTDB_TEST_HTTP_PORT` (environment or
-  `.env`). Skipped without them; they refuse to run against the application's database.
+  `.env`); without them, a QuestDB container if Docker answers, skipped otherwise. They refuse to
+  run against the application's database.
 - `uv run pytest -m live`: contract tests against the real eodhd.com API. They spend calls of the
   account behind `EODHD_API_TOKEN`: run them only when asked. A plain `uv run pytest` includes them.
 - `uv run ruff check`: lint. Ruff has no configuration yet and reports existing findings; the
