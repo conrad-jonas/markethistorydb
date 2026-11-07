@@ -13,7 +13,7 @@
 
 ### 1.1 GitHub Actions in brief
 
-Everything in this feature runs on GitHub's machines, never on your computer. For public
+Everything in this feature runs on GitHub's machines, not on a local computer. For public
 repositories they are free of charge.
 
 | Term | Meaning here |
@@ -67,7 +67,7 @@ repositories they are free of charge.
 
 ### 3.1 What happens on a pull request
 
-1. You push a branch and open a pull request, or push more commits to it.
+1. A branch is pushed and a pull request opened for it, or the branch gets more commits.
 2. GitHub starts `ci.yml`: ten jobs on fresh machines, in parallel. Each checks out the branch,
    installs uv, installs the locked dependencies and runs its command.
 3. The pull request shows one check per job. After a few minutes, all are green, or the red ones
@@ -88,8 +88,8 @@ repositories they are free of charge.
 
 - **The matrix:** *unit* is one job definition with `os: [ubuntu-latest, windows-latest]` and
   `python: ["3.12", "<newest>"]`, which GitHub expands into four jobs. Windows matters because
-  the code runs on your Windows machine (paths, time zones), Linux because servers and the
-  container run it. With `fail-fast: false`, a failing job doesn't cancel the other three, so
+  the code also runs on Windows (paths, time zones), Linux because servers and the container run
+  it. With `fail-fast: false`, a failing job doesn't cancel the other three, so
   each combination shows its own result.
 - **Newest stable Python release:** one entry of the matrix, written out (e.g. `"3.14"`). It is
   raised by hand, in a pull request of its own, when a new Python version is out *and* has had its
@@ -101,8 +101,8 @@ repositories they are free of charge.
     Other implementations, such as PyPy, aren't tested.
 - **Cancelling outdated runs:** `concurrency: { group: ci-${{ github.ref }}, cancel-in-progress:
   true }`. `github.ref` names the branch (for a pull request, the pull request), so every branch
-  has its own group. When you push again while a run of the same branch is still going, GitHub
-  cancels the old run and starts a new one, since the old commit's results no longer matter.
+  has its own group. When a branch gets a new push while its run is still going, GitHub cancels
+  the old run and starts a new one, since the old commit's results no longer matter.
   Different branches don't cancel each other.
 - **uv:** `astral-sh/setup-uv` installs uv and keeps a cache of downloaded packages keyed on
   `uv.lock`, so later runs don't download everything again; uv installs the Python version of the
@@ -255,7 +255,7 @@ instead of dropping, stay with `test-suite-hardening`.
 
 - **Windows:** GitHub's Windows runners can't run Linux containers, so integration tests run on
   Linux in CI. Locally on Windows, Docker Desktop with Linux containers works; without it, the
-  override with your local test service stays.
+  override with a local test service stays.
 - **Pinned version:** 10.0.1, the version of the local test service the error-message tests were
   written against (`SELECT build()` on 2026-10-19). Raising it is a deliberate change, prepared
   by the nightly run against `latest` (CI-S10).
@@ -271,7 +271,7 @@ instead of dropping, stay with `test-suite-hardening`.
 - **Why Dependabot:** pinned versions don't update themselves. `.github/dependabot.yml` has one
   entry, `package-ecosystem: github-actions` with `interval: weekly`. Once a week, Dependabot
   looks for newer versions of each action and opens one pull request per update, replacing SHA
-  and comment. CI runs on it; if it's green, you merge it.
+  and comment. CI runs on it; once it's green, it is merged.
 - **Python dependencies aren't included.** The lock file is updated deliberately, about once a
   month or for an advisory: `uv lock --upgrade` in one pull request of its own, so that the
   integration tests check the new pandas, psycopg and QuestDB client together, and the history
