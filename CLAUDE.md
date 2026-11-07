@@ -13,6 +13,7 @@ REST API is planned.
   `1_constitution.md`, section 4; existing code moves there with the feature `target-architecture`.
 - `tests/unit/`, `tests/integration/`, `tests/live/`: the three test levels. The `conftest.py` of
   each level sets its marker.
+- `.github/`: the CI workflow `ci.yml`, its helper scripts, and Dependabot's configuration.
 
 ## Commands
 
@@ -28,6 +29,8 @@ The project is managed with uv. Never call `python` or `pip` directly.
   account behind `EODHD_API_TOKEN`: run them only when asked. A plain `uv run pytest` includes them.
 - `uv run ruff check`: lint. Ruff has no configuration yet and reports existing findings; the
   feature `code-hygiene` configures it and fixes them.
+- `uv run pyright`: type check of `src/`. It reports existing findings; the feature
+  `library-contract` fixes them.
 - `uv add <package>`, `uv remove <package>`: change dependencies; never edit them in
   `pyproject.toml` by hand.
 

@@ -1,0 +1,154 @@
+# Checks every pull request and every push to main. The ruleset of main requires unit,
+# integration, build and audit; lint and types only report their findings.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same branch cancels the run still going
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# bash on Windows too, and with pipefail: a failing command fails its step even inside a pipe
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  unit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        # 3.12 and the newest Python release that has had its first bugfix release (x.y.1);
+        # raised by hand
+        python: ["3.12", "3.14"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: ${{ matrix.python }}
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run pytest -m unit --cov
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      # Without QUESTDB_TEST_*, the tests start their own QuestDB container
+      - run: uv run pytest -m integration
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv build
+      - name: Check the wheel's files
+        run: |
+          ls dist/*.tar.gz
+          wheel=$(ls dist/*.whl)
+          files=$(unzip -Z1 "$wheel")
+          schemas=$(git ls-files 'src/markethistorydb/setup/schema/*.sql')
+          if [ -z "$schemas" ]; then
+            echo "::error::No schema files in src/markethistorydb/setup/schema"
+            exit 1
+          fi
+          for schema in $schemas; do
+            if ! grep -qxF "${schema#src/}" <<< "$files"; then
+              echo "::error::$wheel lacks ${schema#src/}"
+              exit 1
+            fi
+          done
+          if grep -E '(^|/)(CLAUDE\.md$|\.claude/|tests/|docs/)' <<< "$files"; then
+            echo "::error::$wheel holds the files listed above"
+            exit 1
+          fi
+      - name: Install the wheel into a fresh environment
+        run: |
+          uv venv "$RUNNER_TEMP/wheel"
+          uv pip install --python "$RUNNER_TEMP/wheel" dist/*.whl
+          "$RUNNER_TEMP/wheel/bin/markethistorydb" --help
+          "$RUNNER_TEMP/wheel/bin/python" -m markethistorydb --help
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      # pip-audit skips a package whose platform marker doesn't match the runner, so the markers
+      # are removed: the Windows-only packages are audited too. The export lists every
+      # dependency, hence --no-deps.
+      - name: Audit the locked dependencies
+        run: |
+          uv export --locked --format requirements-txt --no-emit-project --no-hashes \
+            | sed 's/ ;.*//' > "$RUNNER_TEMP/requirements.txt"
+          uv run --locked --group audit pip-audit --disable-pip --no-deps --requirement "$RUNNER_TEMP/requirements.txt"
+
+  lint:
+    runs-on: ubuntu-latest
+    # Reports only, until code-hygiene fixes the existing findings
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check --output-format github
+      - name: Check the workflows' actions and triggers
+        if: ${{ !cancelled() }}
+        run: bash .github/scripts/check_workflows.sh
+
+  types:
+    runs-on: ubuntu-latest
+    # Reports only, until library-contract fixes the existing findings
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      # pyright has no output format for GitHub, so jq turns its JSON into annotations
+      - name: pyright
+        run: |
+          uv run pyright --outputjson > "$RUNNER_TEMP/pyright.json" || status=$?
+          jq -r --arg root "$GITHUB_WORKSPACE/" -f .github/scripts/pyright_annotations.jq \
+            "$RUNNER_TEMP/pyright.json"
+          exit "${status:-0}"

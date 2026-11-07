@@ -5,7 +5,7 @@ Creates and manages a QuestDB database for historical exchange market data, fed 
 ## Install
 
 ```
-uv sync            # development (includes pytest, ruff)
+uv sync            # development (includes pytest, ruff, pyright)
 pip install .      # as a package
 ```
 
