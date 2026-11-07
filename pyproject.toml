@@ -16,7 +16,11 @@ dependencies = [
 markethistorydb = "markethistorydb.cli:main"
 
 [dependency-groups]
+audit = [
+    "pip-audit>=2.10.1",
+]
 dev = [
+    "pyright>=1.1.414",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.7",
@@ -46,6 +50,10 @@ exclude_also = [
     'if __name__ == "__main__":',
     '@(abc\.)?abstractmethod',
 ]
+
+[tool.pyright]
+include = ["src"]
+typeCheckingMode = "basic"
 
 [build-system]
 requires = ["uv_build>=0.12.15,<0.13.0"]

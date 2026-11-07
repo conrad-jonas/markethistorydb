@@ -18,8 +18,8 @@ container fixture's choice of database gets unit tests.
 | ADDED | CI-T05 | The *build* job builds a wheel and an sdist; the installed wheel answers `markethistorydb --help` and `python -m markethistorydb --help` with exit code 0; the wheel holds the schema files and none of `CLAUDE.md`, `.claude/`, `tests/`, `docs/`. | CI-S04 | ci | Missing | *build* job |
 | ADDED | CI-T06 | Given a branch that pins a dependency version with a known advisory, then the *audit* job fails, naming package, version and advisory. | CI-S05 | ci | Missing | demonstration pull request |
 | ADDED | CI-T07 | Given a branch that changes a dependency in `pyproject.toml` without updating `uv.lock`, then every job fails at `uv sync --locked`. | CI-S06, PACKAGING-S04 | ci | Missing | demonstration pull request |
-| ADDED | CI-T08 | Every `uses:` line of the workflows names an action by a full 40-character commit SHA, e.g. `actions/checkout@<40 hex characters> # v4.2.2`; a tag (`@v4`), a branch (`@main`) or a short SHA fails the check. | CI-S07 | static | Missing | a check in the *lint* job (a search over `.github/workflows`) |
-| ADDED | CI-T09 | No workflow triggered by `pull_request` names the environment `nightly` or the secret, and no workflow uses `pull_request_target`. | CI-S02 | static | Missing | the same check |
+| ADDED | CI-T08 | Every `uses:` line of the workflows names an action by a full 40-character commit SHA, e.g. `actions/checkout@<40 hex characters> # v4.2.2`; a tag (`@v4`), a branch (`@main`) or a short SHA fails the check. | CI-S07 | static | Missing | `.github/scripts/check_workflows.sh`, run by the *lint* job |
+| ADDED | CI-T09 | No workflow triggered by `pull_request` names the environment `nightly` or the secret, and no workflow uses `pull_request_target`. | CI-S02 | static | Missing | the same script |
 
 ### Nightly checks
 

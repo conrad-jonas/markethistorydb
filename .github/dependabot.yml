@@ -1,0 +1,8 @@
+# Opens a pull request for each new version of an action the workflows use, with the new commit
+# SHA. The Python dependencies are upgraded by hand, all at once (uv lock --upgrade).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

@@ -5,7 +5,7 @@
 | Part | Files and settings |
 | ---- | ------------------ |
 | repository | GitHub repository `markethistorydb`, public; a ruleset protecting `main`; the environment `nightly` with the secret `EODHD_API_TOKEN` |
-| checks of every change | `.github/workflows/ci.yml` |
+| checks of every change | `.github/workflows/ci.yml`, with `.github/scripts/check_workflows.sh` and `.github/scripts/pyright_annotations.jq` |
 | nightly checks | `.github/workflows/nightly.yml`, `.github/scripts/live_summary.py` |
 | action updates | `.github/dependabot.yml` |
 | integration database | `tests/integration/conftest.py` (container fixture, override) |
@@ -82,14 +82,15 @@ repositories they are free of charge.
 | unit | `ubuntu-latest`, `windows-latest` | 3.12, newest stable | `uv sync --locked`; `uv run pytest -m unit --cov` | yes (4 jobs) |
 | integration | `ubuntu-latest` | 3.12 | `uv sync --locked`; `uv run pytest -m integration`; the fixture starts the container | yes |
 | build | `ubuntu-latest` | 3.12 | `uv build`; check the wheel's file list; install the wheel into a new environment; run `markethistorydb --help` and `python -m markethistorydb --help` | yes |
-| audit | `ubuntu-latest` | 3.12 | `uv export --locked --format requirements-txt` piped into `pip-audit` | yes |
-| lint | `ubuntu-latest` | 3.12 | `uv run ruff check --output-format github` | no |
-| types | `ubuntu-latest` | 3.12 | `uv run pyright`, findings as annotations | no |
+| audit | `ubuntu-latest` | 3.12 | `uv export --locked --format requirements-txt`, without platform markers, piped into `pip-audit` | yes |
+| lint | `ubuntu-latest` | 3.12 | `uv run ruff check --output-format github`; `check_workflows.sh` (pinned actions, no token for pull requests) | no |
+| types | `ubuntu-latest` | 3.12 | `uv run pyright --outputjson`, turned into annotations by `pyright_annotations.jq` | no |
 
 - **The matrix:** *unit* is one job definition with `os: [ubuntu-latest, windows-latest]` and
   `python: ["3.12", "<newest>"]`, which GitHub expands into four jobs. Windows matters because
   the code runs on your Windows machine (paths, time zones), Linux because servers and the
-  container run it.
+  container run it. With `fail-fast: false`, a failing job doesn't cancel the other three, so
+  each combination shows its own result.
 - **Newest stable Python release:** one entry of the matrix, written out (e.g. `"3.14"`). It is
   raised by hand, in a pull request of its own, when a new Python version is out *and* has had its
   first bugfix release (x.y.1). New versions come out every October, and the packages this project
@@ -106,6 +107,12 @@ repositories they are free of charge.
 - **uv:** `astral-sh/setup-uv` installs uv and keeps a cache of downloaded packages keyed on
   `uv.lock`, so later runs don't download everything again; uv installs the Python version of the
   matrix itself.
+- **Checkout without credentials:** `actions/checkout` runs with `persist-credentials: false`.
+  Otherwise it leaves the `GITHUB_TOKEN` in `.git/config` for every later step, and no job
+  pushes.
+- **Audit of every platform:** `pip-audit` leaves out a package whose platform marker doesn't
+  match the machine it runs on, such as `pywin32 ; sys_platform == 'win32'` on Linux. The job
+  removes the markers from the export, so the Windows-only packages are audited too.
 - **Reporting jobs:** *lint* and *types* have `continue-on-error: true` and aren't required. Their
   findings appear as annotations next to the lines of the pull request's diff, without blocking
   it. `code-hygiene` makes *lint* required, `library-contract` makes *types* required.
@@ -280,7 +287,7 @@ instead of dropping, stay with `test-suite-hardening`.
 | DG-9, Python versions | 3.12 and the newest stable release | covers the supported range at half the cost of every version |
 | Integration database | testcontainers, override kept | same behaviour on any machine with Docker and in CI; the override keeps machines without Docker working |
 | Live tests | nightly with the token, refusals shown as "not checked" | provider changes are noticed within a day; a refused account must read neither as a failure nor as a pass |
-| Audit tool | `pip-audit` on the exported lock | reads a requirements file, uses PyPI's advisory data; no account needed |
+| Audit tool | `pip-audit` on the exported lock, installed from the `audit` dependency group | reads a requirements file, uses PyPI's advisory data; no account needed. The group puts the tool and its own dependencies in `uv.lock` with hashes, and Dependabot updates them |
 | Pinning of the GitHub actions | full commit SHA, Dependabot for updates | a tag can be moved to other code, a SHA can't (section 6) |
 
 ## 8 Implementation
