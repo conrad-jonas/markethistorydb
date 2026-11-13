@@ -1,0 +1,90 @@
+# Runs every night on main, and by hand: the live contract tests with the account's token, the
+# integration tests against the newest QuestDB release, and the dependency audit.
+name: nightly
+
+on:
+  schedule:
+    # 03:17 UTC every day; GitHub starts scheduled runs late at full hours, when it is busiest
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      # The environment nightly admits main only; a run on another branch skips the live tests
+      skip_live:
+        description: Skip the live tests
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# bash, with pipefail: a failing command fails its step even inside a pipe
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  live:
+    # inputs is empty on the schedule, so the live tests run there
+    if: ${{ !inputs.skip_live }}
+    runs-on: ubuntu-latest
+    environment: nightly
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - name: Live tests
+        run: uv run pytest -m live -rs --junitxml=live.xml
+        env:
+          EODHD_API_TOKEN: ${{ secrets.EODHD_API_TOKEN }}
+      # Passed, failed and not checked, on the run's summary page; also after failed tests
+      - name: Summary
+        if: always()
+        run: uv run python .github/scripts/live_summary.py live.xml >> "$GITHUB_STEP_SUMMARY"
+
+  integration-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      # A failure doesn't fail the run: it shows that raising the pinned QuestDB version needs work
+      - name: Integration tests against the newest QuestDB release
+        id: tests
+        continue-on-error: true
+        run: uv run pytest -m integration
+        env:
+          QUESTDB_TEST_IMAGE: questdb/questdb:latest
+      - name: Report a failure as a warning
+        if: ${{ steps.tests.outcome == 'failure' }}
+        run: |
+          message="The integration tests fail against questdb/questdb:latest: raising the pinned QuestDB version needs work"
+          echo "::warning::$message"
+          echo "**Warning:** $message." >> "$GITHUB_STEP_SUMMARY"
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      # As in ci.yml: without platform markers, so the Windows-only packages are audited too
+      - name: Audit the locked dependencies
+        run: |
+          uv export --locked --format requirements-txt --no-emit-project --no-hashes \
+            | sed 's/ ;.*//' > "$RUNNER_TEMP/requirements.txt"
+          uv run --locked --group audit pip-audit --disable-pip --no-deps --requirement "$RUNNER_TEMP/requirements.txt"

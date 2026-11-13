@@ -69,6 +69,7 @@ New capability CI (`3_specs.md` gets a chapter "CI: continuous integration" on m
 | ADDED | CI-S08 | A nightly workflow runs on `main` every day at 03:17 UTC, and on demand. It runs the live tests (`pytest -m live`) with the token of CI-S02, and the integration tests against the newest QuestDB release in addition to the pinned one. | COR-17, QA-7 |
 | ADDED | CI-S09 | **Presentation of the live results:** the summary of the nightly run lists three groups: *passed*, *failed*, and *not checked*, with the reason for each test not checked. A test the account can't run (the account is rejected, its calls are used up, or its plan doesn't cover the endpoint; PROVIDER-S22) is *not checked*, with the error type as reason, e.g. "account refused: DataLimitError". The run fails only when a test fails; tests not checked don't fail it. The tests that use the public demo token keep checking end-of-day bars, intraday bars and fundamentals however the account stands. | COR-17 |
 | ADDED | CI-S10 | The run against the newest QuestDB release reports a failure as a warning in its summary without failing the nightly run; it shows that raising the pinned version (CI-S11) needs work. | QA-7 |
+| MODIFIED | QUALITY-S02 | The unit tests run with branch coverage of `src/` and `.github/scripts/`; with `--cov`, the run fails below 100 % line and branch coverage. Excluded are only `if __name__ == "__main__":` blocks and abstract methods. | QA-2 |
 
 ### Integration database
 
