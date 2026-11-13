@@ -54,6 +54,16 @@ jobs:
       - run: uv sync --locked
       # Without QUESTDB_TEST_*, the tests start their own QuestDB container
       - run: uv run pytest -m integration
+      # Shows the QuestDB image the tests ran against, and that their container is gone
+      - name: Check that no QuestDB container is left
+        if: ${{ !cancelled() }}
+        run: |
+          docker image ls questdb/questdb
+          if docker ps --all --format '{{.Image}} {{.Names}} {{.Status}}' | grep '^questdb/questdb'; then
+            echo "::error::A QuestDB container is left after the integration tests"
+            exit 1
+          fi
+          echo "No QuestDB container left"
 
   build:
     runs-on: ubuntu-latest
