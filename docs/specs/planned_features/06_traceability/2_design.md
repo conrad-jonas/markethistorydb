@@ -167,7 +167,7 @@ feature's own items enter the global files at its merge (issue 3).
   - QUALITY-T12 compares the report with `tests/data/trace/expected_7_traceability.md`.
   - QUALITY-T14 has one parametrised case per error of QUALITY-S15, each changing one line of
     the sample.
-- **Coverage:** `source = ["src", "scripts"]` (QUALITY-S02). The `__main__` block is excluded,
+- **Coverage:** `source = ["src", ".github/scripts", "scripts"]` (QUALITY-S02). The `__main__` block is excluded,
   as it is everywhere.
 - The tests carry `spec` markers themselves.
 

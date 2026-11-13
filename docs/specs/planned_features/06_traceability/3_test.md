@@ -28,5 +28,5 @@
 
 | Change | ID | Test case | Verifies | Level | Status | Implemented by |
 | ------ | -- | --------- | -------- | ----- | ------ | -------------- |
-| MODIFIED | QUALITY-T02 | `uv run pytest -m unit --cov` passes only with 100 % line and branch coverage of `src/` and `scripts/` (`[tool.coverage]` in `pyproject.toml`). | QUALITY-S02 | suite | Missing | — |
+| MODIFIED | QUALITY-T02 | `uv run pytest -m unit --cov` passes only with 100 % line and branch coverage of `src/`, `.github/scripts/` and `scripts/` (`[tool.coverage]` in `pyproject.toml`). | QUALITY-S02 | suite | Missing | — |
 | MODIFIED | QUALITY-T11 | Given `src/`, `tests/` and `scripts/`, then `ruff check` reports no finding and `ruff format --check` no file to reformat, with the configuration of QUALITY-S11; no file starts with a shebang (the job *lint*; `[tool.ruff]` in `pyproject.toml`). | QUALITY-S11 | static | Missing | — |

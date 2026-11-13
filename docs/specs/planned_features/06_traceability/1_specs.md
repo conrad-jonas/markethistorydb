@@ -40,7 +40,7 @@ statuses after its merge) have no script to derive them yet.
 
 | Change | ID | Specification | Satisfies |
 | ------ | -- | ------------- | --------- |
-| MODIFIED | QUALITY-S02 | The unit tests run with branch coverage of `src/` and `scripts/`; with `--cov`, the run fails below 100 % line and branch coverage. Excluded are only `if __name__ == "__main__":` blocks and abstract methods. | QA-2 |
+| MODIFIED | QUALITY-S02 | The unit tests run with branch coverage of `src/`, `.github/scripts/` and `scripts/`; with `--cov`, the run fails below 100 % line and branch coverage. Excluded are only `if __name__ == "__main__":` blocks and abstract methods. | QA-2 |
 | MODIFIED | QUALITY-S11 | **Lint and format:** `ruff check` and `ruff format --check` pass on `src/`, `tests/` and `scripts/` with the configuration in `pyproject.toml`: Python 3.12 as target, a line length of 120, ruff's default rules plus naming (`N`), logging calls (`G`: values are passed as arguments, formatted only when a record is emitted) and security (`S`, bandit's checks: e.g. `eval`, unpickling, a shell in `subprocess`, requests without a timeout or with `verify=False`, hard-coded passwords, SQL text built from strings). The date and time rules (`DTZ`) are off, since naive datetimes mean UTC (COR-10). Unused imports are allowed in `__init__.py` files until these declare `__all__` (`library-contract`). The tests may use `assert`, fake secrets and SQL text built from strings. The statement modules in `db/statements/` may build SQL text from the table and column constants, since every value goes in as a bound parameter or as a literal that psycopg quotes (STORAGE-S17), until `schema-from-code` replaces them. No file starts with a shebang. | QA-14, QA-4, QA-11 |
 
 ## Not done
