@@ -316,9 +316,11 @@ Markdown of `live_summary.py` through `tee`, instead of appending it with `>>`:
 | 3 | The live checks of value semantics; the live summary in the job log | PROVIDER-S23, T26, T27; CI-S09, T11 |
 | 4 | The performance baseline: spies, `baseline.json`, the summary hook; the merge into the global files | QUALITY-S10, T10 |
 
-Issue 4 needs `FakeSeriesApi` from `test-suite-hardening`; issues 1 to 3 need only the test
-database and the demo token. CI-T11's manual run of `nightly.yml` follows the merge of issue 3,
-on `main`.
+Issue 4 needs `FakeSeriesApi` from `test-suite-hardening`; issues 1 and 2 need only the test
+database, and issue 3 the demo token. CI-T11's manual run of `nightly.yml` follows the merge of
+issue 3, on `main`, with the token of the environment `nightly` (CI-S02). While eodhd.com refuses
+that token, the run checks the half "with the account refused"; the half "with the account
+usable" needs a token that eodhd.com accepts, and until one is set, the record says so.
 
 ## 9 Open questions
 

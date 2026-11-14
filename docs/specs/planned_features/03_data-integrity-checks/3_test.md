@@ -27,7 +27,7 @@ assertions.
 
 | Change | ID | Test case | Verifies | Level | Status | Implemented by |
 | ------ | -- | --------- | -------- | ----- | ------ | -------------- |
-| MODIFIED | CI-T11 | A manual run of `nightly.yml` with the account refused passes and shows the account tests as not checked, on the run's summary page and in the job log of *live*; with the account usable, they show as passed. | CI-S08, CI-S09 | ci | Missing | — |
+| MODIFIED | CI-T11 | A manual run of `nightly.yml` with the account refused passes and shows the account tests as not checked; with the account usable, they show as passed. In both runs, the job log of *live* holds the same summary as the run's page: the account line, and the three groups with their tests and reasons. | CI-S08, CI-S09 | ci | Missing | — |
 
 CI-T11 comes from `continuous-integration`, which isn't merged into `5_test.md` yet; the test
 case builds on its text in that feature's `3_test.md` (`1_constitution.md` 6.7, "Across
