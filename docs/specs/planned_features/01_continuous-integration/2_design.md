@@ -44,6 +44,8 @@ repositories they are free of charge.
     combination;
   - merge commits only (no squash, no rebase), matching the `--no-ff` workflow of
     `1_constitution.md` 5.3;
+  - every review conversation resolved before merging ("Require conversation resolution before
+    merging"), so no review comment stays unanswered (`1_constitution.md` 5.3);
   - no force pushes and no deletion of `main`.
 - **Secret and environment** (Settings → Environments → New environment): the environment
   `nightly` holds the secret `EODHD_API_TOKEN`, and its deployment rule allows the branch `main`

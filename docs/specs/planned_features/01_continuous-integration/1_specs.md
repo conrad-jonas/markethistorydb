@@ -49,7 +49,7 @@ New capability CI (`3_specs.md` gets a chapter "CI: continuous integration" on m
 
 | Change | ID | Specification | Satisfies |
 | ------ | -- | ------------- | --------- |
-| ADDED | CI-S01 | The project lives in a public GitHub repository. `main` accepts changes only through pull requests, and only when the required checks of CI-S03 have passed; force pushes and deletion of `main` are refused. A pull request is merged with a merge commit (`1_constitution.md` 5.3). | QA-4 |
+| ADDED | CI-S01 | The project lives in a public GitHub repository. `main` accepts changes only through pull requests, and only when the required checks of CI-S03 have passed and every review conversation is resolved; force pushes and deletion of `main` are refused. A pull request is merged with a merge commit (`1_constitution.md` 5.3). | QA-4 |
 | ADDED | CI-S02 | The API token is stored as a secret of the repository, available to the nightly workflow on `main` only. Workflows of pull requests, including those from forks, never get it. | QA-8 |
 
 ### Checks of every change

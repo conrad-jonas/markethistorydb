@@ -142,8 +142,14 @@ src/markethistorydb/
 - `main` only receives merges: every change is made on a branch named `feature/…`, `fix/…`,
   `test/…`, `refactor/…`, `chore/…` or, for the specification documents, `docs/…`, and merged
   with `git merge --no-ff`.
+- One commit per logical change: a subject line and a short prose body wrapped at about 70
+  columns.
 - Once the repository is on GitHub, every branch is merged through a pull request, and each
   pull request implements one GitHub issue.
+- Every pull request is reviewed by a third party, a reviewer other than its author. Each review
+  comment is answered in its thread: a comment that holds is fixed on the branch, and the answer
+  names the commit; one that doesn't is answered with the reason. The pull request is merged only
+  once every comment has its answer.
 - `CLAUDE.md` and `.claude/rules/` are tracked: they hold the instructions for coding agents that
   apply to every contributor. Personal instructions go to `CLAUDE.local.md` and personal settings
   stay in `.claude/`; both are ignored (`.gitignore`).
