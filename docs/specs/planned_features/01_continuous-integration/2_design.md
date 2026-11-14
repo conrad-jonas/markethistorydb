@@ -46,7 +46,8 @@ repositories they are free of charge.
     `1_constitution.md` 5.3;
   - every review conversation resolved before merging ("Require conversation resolution before
     merging"). The setting checks only that each conversation is resolved, not that it was
-    answered; the answer in each thread (`1_constitution.md` 5.3) stays a check by hand;
+    answered; that every review comment in it has its answer (`1_constitution.md` 5.3) stays a
+    check by hand;
   - no required approving review: the third-party reviewer comments without approving, and
     GitHub doesn't let authors approve their own pull requests, so a required approval would
     block every merge. That the review took place is checked by hand before the merge, like the
