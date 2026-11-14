@@ -148,7 +148,9 @@ src/markethistorydb/
   pull request implements one GitHub issue.
 - Every issue and pull request gets an assignee, a milestone and labels, where GitHub allows it
   and it makes sense: the label of the planned feature the work belongs to, e.g.
-  `continuous-integration`, and any other label that fits, e.g. `bug` or `documentation`.
+  `continuous-integration`, and any other label that fits, e.g. `bug` or `documentation`. An
+  issue that implements one of a planned feature's issues (`2_design.md`, "Implementation") has
+  the type `Task`.
 - Every pull request is reviewed by a third party, a reviewer other than its author. Each review
   comment is answered in its thread: a comment that holds is fixed on the branch, and the answer
   names the commit; one that doesn't is answered with the reason. The pull request is merged only
