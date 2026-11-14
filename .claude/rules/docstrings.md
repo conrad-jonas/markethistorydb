@@ -46,3 +46,11 @@ def fetch(symbol: str, retries: int = 3) -> list[Price]:
   `:raises MarketHistoryDbError: If any fetch step fails`.
 - Errors returned as values (`None`, an error result) belong in `:return:`,
   not `:raises:`.
+
+## Tests
+
+- Test functions have no docstring: their name says what they check, e.g.
+  `test_a_refusal_names_its_error_type`.
+- Test helpers and fixtures follow the rules above, with `:param <name>:` for the
+  pytest fixtures they take, e.g. `:param monkeypatch: pytest fixture used to replace
+  requests.get`.
