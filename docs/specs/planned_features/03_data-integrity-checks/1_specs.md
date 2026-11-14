@@ -1,6 +1,6 @@
 # data-integrity-checks: specification changes
 
-State: Ready · Milestone: M0, third feature · Kind: change (STORAGE, PROVIDER, QUALITY) ·
+State: Ready · Milestone: M0, third feature · Kind: change (STORAGE, PROVIDER, QUALITY, CI) ·
 Requirements: COR-17, QA-13 · Depends on: `continuous-integration`,
 `test-suite-hardening` · Decisions: taken on 2026-10-23 (`2_design.md`, section 7)
 
@@ -35,6 +35,9 @@ records the race without fixing it (decided on 2026-10-23), and adds the baselin
   quarterly earnings;
 - the race, stated in the specification and tested deterministically, as an expected failure;
 - live checks of the value semantics of prices, nightly with the public demo token;
+- the summary of the live tests also in the job log of the nightly run: GitHub shows the
+  summary page only in the web app, so the record of a run could otherwise only be copied from
+  the browser;
 - a performance baseline: a faked fetch against the test database whose counts are checked
   for regressions, and whose times and memory are reported.
 
@@ -71,6 +74,15 @@ records the race without fixing it (decided on 2026-10-23), and adds the baselin
 | Change | ID | Specification | Satisfies |
 | ------ | -- | ------------- | --------- |
 | ADDED | PROVIDER-S23 | **Value semantics:** live contract checks use the public demo token against AAPL.US around its 4:1 split of 2020-08-31. They verify what the code and the planned features rely on:<br>• end-of-day open, high, low, close and volume are as traded, not adjusted for splits;<br>• the adjusted close is adjusted for splits and dividends, with at most 4 decimals;<br>• intraday bars are as traded, with timestamps in Unix seconds UTC and `gmtoffset` 0;<br>• an intraday request returns the bars at both of its bounds.<br>They run nightly (CI-S08), whatever the state of the account. | COR-17 |
+
+### Presentation of the live results
+
+| Change | ID | Specification | Satisfies |
+| ------ | -- | ------------- | --------- |
+| MODIFIED | CI-S09 | **Presentation of the live results:** the summary of the nightly run lists three groups: *passed*, *failed*, and *not checked*, with the reason for each test not checked. The log of the job that runs the live tests holds the same summary, so it can be read without the run's web page. A test the account can't run (the account is rejected, its calls are used up, or its plan doesn't cover the endpoint; PROVIDER-S22) is *not checked*, with the error type as reason, e.g. "account refused: DataLimitError". The run fails only when a test fails; tests not checked don't fail it. The tests that use the public demo token keep checking end-of-day bars, intraday bars and fundamentals however the account stands. | COR-17 |
+
+CI-S09 comes from `continuous-integration`, which isn't merged into `3_specs.md` yet; the item
+builds on its text in that feature's `1_specs.md` (`1_constitution.md` 6.7, "Across features").
 
 ### Performance baseline
 
