@@ -62,8 +62,5 @@ The full rules are in `1_constitution.md`, section 5. The ones most often releva
 
 ## Git
 
-- `main` only receives merges. Every change is made on a branch named `feature/…`, `fix/…`,
-  `test/…`, `refactor/…`, `chore/…` or, for the specification documents, `docs/…`, and merged
-  with `git merge --no-ff` (`1_constitution.md`, 5.3).
-- One commit per logical change: a subject line and a short prose body wrapped at about 70
-  columns.
+Branches, commits, merges, pull requests and their reviews: `1_constitution.md`, section 5.3.
+Read it before any of these.

@@ -11,7 +11,7 @@ container fixture's choice of database gets unit tests.
 
 | Change | ID | Test case | Verifies | Level | Status | Implemented by |
 | ------ | -- | --------- | -------- | ----- | ------ | -------------- |
-| ADDED | CI-T01 | Given a pull request whose branch adds a failing unit test, then the *unit* checks fail and GitHub refuses the merge; a direct push to `main` is refused. | CI-S01, CI-S03 | ci | Missing | demonstration pull request |
+| ADDED | CI-T01 | Given a pull request whose branch adds a failing unit test, then the *unit* checks fail and GitHub refuses the merge; a direct push to `main` is refused. Given a pull request with its required checks green and a review conversation open, then GitHub refuses its merge as well. | CI-S01, CI-S03 | ci | Missing | demonstration pull request |
 | ADDED | CI-T02 | Given a pull request that lowers the coverage below 100 %, then the *unit* checks fail. | CI-S03 | ci | Missing | demonstration pull request |
 | ADDED | CI-T03 | A run of `ci.yml` shows four *unit* jobs (Linux and Windows, each with Python 3.12 and the newest stable Python release), and *integration*, *build*, *audit*, *lint* and *types*; *lint* and *types* report findings without failing the run. | CI-S03 | ci | Missing | first run after the push |
 | ADDED | CI-T04 | A second push to a branch while its run is going cancels the older run. | CI-S03 | ci | Missing | demonstration pull request |
