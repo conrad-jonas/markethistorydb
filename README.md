@@ -163,7 +163,8 @@ uv run pytest -m live            # contract tests against the real eodhd.com API
 > account behind `EODHD_API_TOKEN`: one call each to `exchanges-list` and
 > `exchange-symbol-list` per run. These count against the plan's daily limit, and on a
 > pay-per-use plan they may cost money. Leave `EODHD_API_TOKEN` unset for the test run, or pass
-> `-m "not live"`, to avoid them. The other live tests use the free public `demo` token.
+> `-m "not live"`, to avoid them. The other live tests use the free public `demo` token. The
+> nightly workflow on GitHub spends the same two calls each night, with the token stored there.
 
 Coverage is off unless `--cov` is passed. Its settings (source, branch coverage, the 100 %
 threshold, missing lines in the report) come from `[tool.coverage.*]` in `pyproject.toml`.
@@ -173,8 +174,10 @@ API is faked with the sample payloads in `tests/data/eodhd`, so no unit test cal
 
 `tests/live` checks that eodhd.com still answers the way those samples record: same fields,
 same JSON types, and frames from the request layer that hold exactly the columns of their
-tables. Run it regularly (e.g. nightly), since the unit tests cannot notice when the provider
-changes its API. It runs by default and needs network access; `-m "not live"` leaves it out.
+tables. The unit tests cannot notice when the provider changes its API, so the workflow
+`.github/workflows/nightly.yml` runs it every night on GitHub, with the account's token, and
+lists the tests passed, failed and not checked on the run's summary page. It runs by default
+and needs network access; `-m "not live"` leaves it out.
 eod, intraday and fundamentals are called with eodhd.com's public `demo` token. The list of
 exchanges (`exchanges-list`) and the list of an exchange's symbols (`exchange-symbol-list`) need
 `EODHD_API_TOKEN`, one call each per run (see **API costs** above). They are skipped if it is

@@ -80,7 +80,7 @@ repositories they are free of charge.
 | Job | Runner | Python | Steps | Required |
 | --- | ------ | ------ | ----- | -------- |
 | unit | `ubuntu-latest`, `windows-latest` | 3.12, newest stable | `uv sync --locked`; `uv run pytest -m unit --cov` | yes (4 jobs) |
-| integration | `ubuntu-latest` | 3.12 | `uv sync --locked`; `uv run pytest -m integration`; the fixture starts the container | yes |
+| integration | `ubuntu-latest` | 3.12 | `uv sync --locked`; `uv run pytest -m integration`; the fixture starts the container; then a step lists the QuestDB images on the runner and fails if a QuestDB container is left or the containers can't be listed (CI-T14) | yes |
 | build | `ubuntu-latest` | 3.12 | `uv build`; check the wheel's file list; install the wheel into a new environment; run `markethistorydb --help` and `python -m markethistorydb --help` | yes |
 | audit | `ubuntu-latest` | 3.12 | `uv export --locked --format requirements-txt`, without platform markers, piped into `pip-audit` | yes |
 | lint | `ubuntu-latest` | 3.12 | `uv run ruff check --output-format github`; `check_workflows.sh` (pinned actions, no token for pull requests) | no |
@@ -169,6 +169,11 @@ jobs:
 - **On demand:** `workflow_dispatch` adds a "Run workflow" button to the workflow's page (tab
   "Actions"), for a run outside the schedule, e.g. right after setting the secret.
 - **From `main` only:** GitHub runs scheduled workflows from the default branch only.
+- **Skipping the live tests:** the form of the "Run workflow" button has a checkbox "Skip the
+  live tests" (a boolean input `skip_live` of `workflow_dispatch`, unticked by default). When
+  ticked, *live* is skipped and the other two jobs run. A manual run on another branch than
+  `main` needs it: the environment `nightly` admits `main` only, so GitHub would refuse to start
+  *live* there and fail the run. The schedule has no form; its runs always include *live*.
 - **Inactivity:** GitHub disables the scheduled workflows of a public repository after 60 days
   without a commit. A long pause therefore stops the nightly runs; they are switched on again on
   the workflow's page.
@@ -178,8 +183,8 @@ jobs:
 
 | Job | Environment | Steps |
 | --- | ----------- | ----- |
-| live | `nightly` (gets the token) | `uv sync --locked`; `uv run pytest -m live -rs --junitxml=live.xml`; `uv run python .github/scripts/live_summary.py live.xml >> "$GITHUB_STEP_SUMMARY"` |
-| integration-latest | none | `QUESTDB_TEST_IMAGE=questdb/questdb:latest uv run pytest -m integration`, with `continue-on-error: true`; a failure becomes a warning in the summary |
+| live | `nightly` (gets the token) | `uv sync --locked`; `uv run pytest -m live -rs --junitxml=live.xml`; `uv run python .github/scripts/live_summary.py live.xml >> "$GITHUB_STEP_SUMMARY"`. Skipped when "Skip the live tests" is ticked |
+| integration-latest | none | `QUESTDB_TEST_IMAGE=questdb/questdb:latest uv run pytest -m integration`, a step with `continue-on-error: true`; a failure becomes a warning, as an annotation of the run and in its summary, and the job stays green |
 | audit | none | as in `ci.yml`, so a new advisory is noticed even without a pull request |
 
 The pytest options of *live*:
@@ -201,16 +206,28 @@ The step runs even when tests failed (`if: always()`), so the summary is there i
 ```
 Account checks: not run (DataLimitError)
 
-Passed (13)       test_daily_prices_have_the_sample_s_shape, ...
-Failed (0)
-Not checked (5)   test_exchanges_have_the_sample_s_shape: account refused: DataLimitError
-                  ...
+**Passed (13)**
+
+- `test_daily_prices_have_the_sample_s_shape`
+- ...
+
+**Failed (0)**
+
+**Not checked (5)**
+
+- `test_exchanges_have_the_sample_s_shape`: account refused: DataLimitError
+- ...
 ```
 
 - A skip whose reason starts with "eodhd.com refused EODHD_API_TOKEN (" is shown as "account
-  refused: <error type>"; other skips keep their reason.
-- The first line says whether the account's tests ran. The account is refused most nights, so
-  this line tells a quiet night from a checked one.
+  refused: <error type>"; other skips keep their reason. A failure shows the first line of its
+  message; an error in a fixture counts as failed.
+- The first line says whether the account's tests ran: "not run" with each error type of a
+  refusal, or with "EODHD_API_TOKEN is not set" when the secret is missing; "run" otherwise.
+  The account is refused most nights, so this line tells a quiet night from a checked one.
+- The script uses the standard library only and is unit-tested under the coverage gate
+  (QUALITY-S02: `.github/scripts/` joins `src/` in `source`). The tests load it by its path,
+  since `.github/scripts/` is no package.
 - A failure among the tests that use the demo token fails the job, and so the run.
 
 The live tests already skip when the account is refused (`_request_with_account_token` in
@@ -315,16 +332,18 @@ ruleset comes after the push.
 ## 9 Open questions
 
 - **Docker tag:** answered on 2026-11-01: the tag `questdb/questdb:10.0.1` exists on Docker Hub.
-- **Account status first?** eodhd has an endpoint for the account's status (calls left,
-  subscription). Asking it first would let the summary say why the account is refused before the
-  tests run. Whether that request itself counts against the quota is unknown; check in issue 5,
-  otherwise the skip reasons are enough.
+- **Account status first?** Answered in issue 5: no. eodhd has an endpoint for the account's
+  status (`/api/user`: calls used, daily limit, subscription), but its documentation doesn't say
+  whether the request counts against the quota, and its answer holds the account holder's name
+  and email, which must not reach the logs of a public repository. The skip reasons already
+  name the error type.
 
 ## 10 Changes to `4_design.md` on merge
 
 - New chapter "CI: continuous integration" with sections 1 to 7 of this file, shortened.
 - `4_design.md` 14.1 (PACKAGING): `uv.lock` tracked.
-- `4_design.md` 15 (QUALITY): the container fixture in the guarantees table.
+- `4_design.md` 15 (QUALITY): the container fixture in the guarantees table; the coverage gate's
+  `source = ["src", ".github/scripts"]`.
 - `4_design.md` 1.4 (external dependencies): Docker for local integration tests without the
   override.
 - The terms of section 1.1 go to the glossary of `1_constitution.md`.
