@@ -8,6 +8,7 @@
 | the race, tested | `tests/integration/db/io/test_delete.py` |
 | value semantics | `tests/live/test_eodhd_semantics.py` (new) |
 | performance baseline | `tests/integration/performance/` (new): `conftest.py`, `test_baseline.py`, `baseline.json` |
+| live summary in the job log | `.github/workflows/nightly.yml` (step "Summary"); `README.md` (the live tests) |
 
 The key change is the only change under `src/`.
 
@@ -190,6 +191,31 @@ the account's token, which is refused on most nights.
   boundary arrives in both windows and is stored once (STORAGE-S05). This answers open
   question 1 of `test-suite-hardening`.
 
+### 4.4 The live summary in the job log
+
+The step "Summary" of the nightly job *live* (`continuous-integration`, design 4.3) pipes the
+Markdown of `live_summary.py` through `tee`, instead of appending it with `>>`:
+
+```yaml
+      - name: Summary
+        if: always()
+        run: uv run python .github/scripts/live_summary.py live.xml | tee -a "$GITHUB_STEP_SUMMARY"
+```
+
+- **Why:** GitHub shows a job's summary only in the web app.
+  - The check run's `output.summary` is empty, and the raw view answers 404 without a signed-in
+    browser (checked on 2026-11-14).
+  - The log is returned by `gh run view <run> --log --job <job>`.
+  - So the record of a manual run (CI-T11) can quote the summary from the command line.
+- **Nothing new is exposed:**
+  - The summary holds test names, error types and skip reasons, which `pytest -rs` already
+    prints into the same log.
+  - The log is as public as the summary page.
+- **Failure:** the workflow's shell runs with `pipefail`, so a failing script still fails the
+  step.
+- `live_summary.py` and its tests stay as they are (CI-T10).
+- The README's paragraph on the live tests names the job log next to the summary page.
+
 ## 5 Performance baseline
 
 ### 5.1 The measured fetch
@@ -276,6 +302,7 @@ the account's token, which is refused on most nights.
 | Deduplication keys | the period end joins the keys of the six statement tables and of quarterly earnings | the collision is real for the statement tables and possible for quarterly earnings (section 3); the cheap fix the gap row named |
 | Existing databases | no migration | decided on 2026-10-23: no data worth keeping |
 | Value semantics | live checks with the demo token against AAPL's 4:1 split of 2020-08-31 | run every night regardless of the account; the demo token refuses NVDA |
+| Live summary from the command line | the step "Summary" writes its Markdown to the job log as well (`tee`) | decided on 2026-11-14: one line and no new action; uploading `live.xml` as an artifact as well was not chosen, since the log holds the same summary and the action would need a pin and Dependabot's updates |
 | DG-4 precondition | met: prices are raw | section 4.1 |
 | Baseline | synthetic: a faked fetch against the test database, counts checked, times reported | decided on 2026-10-23: repeatable, free, and a count change shows in the pull request that causes it |
 | Reused tickers | left to `listings-and-universe` | decided on 2026-10-23 |
@@ -286,11 +313,12 @@ the account's token, which is refused on most nights.
 | - | ----- | ------ |
 | 1 | The keys of the seven tables; the test of two periods reported or filed on one day; STORAGE-T10's test updated | STORAGE-S06, T04, T10, T37 |
 | 2 | The race: FUND-T12's two tests, one marked as a strict expected failure | STORAGE-S19, FUND-T12 |
-| 3 | The live checks of value semantics | PROVIDER-S23, T26, T27 |
+| 3 | The live checks of value semantics; the live summary in the job log | PROVIDER-S23, T26, T27; CI-S09, T11 |
 | 4 | The performance baseline: spies, `baseline.json`, the summary hook; the merge into the global files | QUALITY-S10, T10 |
 
 Issue 4 needs `FakeSeriesApi` from `test-suite-hardening`; issues 1 to 3 need only the test
-database and the demo token.
+database and the demo token. CI-T11's manual run of `nightly.yml` follows the merge of issue 3,
+on `main`.
 
 ## 9 Open questions
 
@@ -313,4 +341,6 @@ database and the demo token.
 - 15 (QUALITY): the baseline in the table of guarantees, with the recorded numbers of
   `baseline.json`.
 - Appendix A, the decision on deletions: the consequence gains the race.
+- Chapter "CI: continuous integration" (from `continuous-integration`), the live summary: the
+  Markdown goes to the job log as well (section 4.4).
 - No row of "Known limitations" is removed.
