@@ -2,8 +2,9 @@
 
 The race gets a deterministic test of the intended behaviour, marked as a strict expected
 failure, and the key change a test of two periods reported or filed on one day. The value
-semantics are checked live every night with the demo token. The baseline is one integration
-test whose counts are its assertions.
+semantics are checked live every night with the demo token; the summary of those runs is in the
+job log as well as on the run's page. The baseline is one integration test whose counts are its
+assertions.
 
 ## Test case changes
 
@@ -21,6 +22,16 @@ test whose counts are its assertions.
 | ------ | -- | --------- | -------- | ----- | ------ | -------------- |
 | ADDED | PROVIDER-T26 | Given AAPL's end-of-day bars from 2020-08-26 to 2020-09-02 with the demo token, then across the split day of 2020-08-31 the close falls by a factor between 3 and 5, the adjusted close changes by less than 20 %, the volume changes by a factor below 2, and every adjusted close has at most 4 decimals. | PROVIDER-S23 | live | Missing | `live/test_eodhd_semantics.py`: `test_end_of_day_prices_are_as_traded_and_only_the_adjusted_close_is_adjusted` |
 | ADDED | PROVIDER-T27 | Given AAPL's minute bars from 2020-08-28 19:57 to 2020-08-31 13:32 UTC with the demo token, then the first bar is at 19:57 and the last at 13:32, every bar has `gmtoffset` 0 and a `datetime` equal to its timestamp in UTC, and the close falls by a factor between 3 and 5 across the split. | PROVIDER-S23 | live | Missing | `live/test_eodhd_semantics.py`: `test_minute_prices_are_as_traded_in_utc_with_both_bounds_included` |
+
+### Presentation of the live results
+
+| Change | ID | Test case | Verifies | Level | Status | Implemented by |
+| ------ | -- | --------- | -------- | ----- | ------ | -------------- |
+| MODIFIED | CI-T11 | A manual run of `nightly.yml` with the account refused passes and shows the account tests as not checked; with the account usable, they show as passed. In both runs, the job log of *live* holds the same summary as the run's page: the account line, and the three groups with their tests and reasons. | CI-S08, CI-S09 | ci | Missing | — |
+
+CI-T11 comes from `continuous-integration`, which isn't merged into `5_test.md` yet; the test
+case builds on its text in that feature's `3_test.md` (`1_constitution.md` 6.7, "Across
+features").
 
 ### Performance baseline
 
