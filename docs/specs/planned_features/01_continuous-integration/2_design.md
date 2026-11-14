@@ -45,7 +45,12 @@ repositories they are free of charge.
   - merge commits only (no squash, no rebase), matching the `--no-ff` workflow of
     `1_constitution.md` 5.3;
   - every review conversation resolved before merging ("Require conversation resolution before
-    merging"), so no review comment stays unanswered (`1_constitution.md` 5.3);
+    merging"). The setting checks only that each conversation is resolved, not that it was
+    answered; the answer in each thread (`1_constitution.md` 5.3) stays a check by hand;
+  - no required approving review: the third-party reviewer comments without approving, and
+    GitHub doesn't let authors approve their own pull requests, so a required approval would
+    block every merge. That the review took place is checked by hand before the merge, like the
+    answers;
   - no force pushes and no deletion of `main`.
 - **Secret and environment** (Settings → Environments → New environment): the environment
   `nightly` holds the secret `EODHD_API_TOKEN`, and its deployment rule allows the branch `main`
