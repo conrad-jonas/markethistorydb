@@ -80,7 +80,7 @@ repositories they are free of charge.
 | Job | Runner | Python | Steps | Required |
 | --- | ------ | ------ | ----- | -------- |
 | unit | `ubuntu-latest`, `windows-latest` | 3.12, newest stable | `uv sync --locked`; `uv run pytest -m unit --cov` | yes (4 jobs) |
-| integration | `ubuntu-latest` | 3.12 | `uv sync --locked`; `uv run pytest -m integration`; the fixture starts the container; then a step lists the QuestDB images on the runner and fails if a QuestDB container is left (CI-T14) | yes |
+| integration | `ubuntu-latest` | 3.12 | `uv sync --locked`; `uv run pytest -m integration`; the fixture starts the container; then a step lists the QuestDB images on the runner and fails if a QuestDB container is left or the containers can't be listed (CI-T14) | yes |
 | build | `ubuntu-latest` | 3.12 | `uv build`; check the wheel's file list; install the wheel into a new environment; run `markethistorydb --help` and `python -m markethistorydb --help` | yes |
 | audit | `ubuntu-latest` | 3.12 | `uv export --locked --format requirements-txt`, without platform markers, piped into `pip-audit` | yes |
 | lint | `ubuntu-latest` | 3.12 | `uv run ruff check --output-format github`; `check_workflows.sh` (pinned actions, no token for pull requests) | no |

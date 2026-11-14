@@ -59,7 +59,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           docker image ls questdb/questdb
-          if docker ps --all --format '{{.Image}} {{.Names}} {{.Status}}' | grep '^questdb/questdb'; then
+          # Listed outside the if: a failure inside its condition would not fail the step
+          containers=$(docker ps --all --format '{{.Image}} {{.Names}} {{.Status}}')
+          if grep '^questdb/questdb' <<< "$containers"; then
             echo "::error::A QuestDB container is left after the integration tests"
             exit 1
           fi
