@@ -79,6 +79,7 @@ Every requirement of the project, implemented or not.
 | COR-15 | Every stored record shall be traceable to the run and the time it was stored. | Needed to explain and reproduce any value. | Should | Open |
 | COR-16 | Every run shall record the providers it used, its parameters and the software version. | Needed to explain and reproduce any run. | Should | Open |
 | COR-17 | Changes in a provider's interface or data semantics shall be detected by regular automated checks. | Provider changes must be noticed before they corrupt stored data. | Should | Partial: checks of fields and types exist; value semantics are not checked; not scheduled |
+| COR-18 | For every bar interval, what a bar's timestamp stands for (the start of its interval, its end, or its trading date) shall be documented and be the same for all bars of that interval. | A client must know when a bar's values were final; reading a bar's start as its end lets a backtest see a close before it happened. | Must | Partial: a daily bar's timestamp is its trading date; whether a minute bar's timestamp is the start or the end of its minute is not documented |
 
 ## 3 Data for backtesting (BT)
 
@@ -89,19 +90,20 @@ Every requirement of the project, implemented or not.
 | BT-3 | An instrument's history shall remain findable after a ticker change. | Old signal lists use old tickers. | Could | Open |
 | BT-4 | Users shall be able to determine the members of an index on any past date. | Index strategies need historical membership. | Could | Open |
 | BT-5 | Price queries shall return unadjusted prices, prices adjusted for splits, or prices adjusted for splits and dividends, as chosen by the caller. | Strategies and analyses need different adjustments. | Must | Open |
-| BT-6 | Adjusted prices shall reflect every corporate action known to the system at query time. | Stale adjustments distort returns. | Must | Open |
-| BT-7 | Splits and dividends shall be queryable. | The backtester needs them, e.g. for dividend income. | Should | Open |
+| BT-6 | Adjusted prices shall reflect every corporate action known to the system at query time; when requested as of a date (BT-19), those effective on or before that date. | Stale adjustments distort returns. | Must | Open |
+| BT-7 | Splits and dividends shall be queryable with their dates and terms: for a split its effective date and ratio, for a dividend its ex-date, payment date, amount per share and currency. | The backtester applies them to positions and cash: a split on its effective date, a dividend's cash on its payment date. | Must | Open |
 | BT-8 | Fundamental data shall be queryable as known on a given date, without values published later. | Prevents look-ahead bias. | Must | Partial: the publication date is stored; no query by date |
 | BT-9 | A revised fundamental value shall not replace the earlier value; both shall remain available. | Needed for point-in-time queries. | Must | Open |
 | BT-10 | Users shall be able to request bars aggregated to coarser intervals than stored. | Charting and strategies work on many intervals. | Should | Open |
 | BT-11 | Aggregated bars shall be aligned to the trading sessions and time zone of the instrument's exchange. | Bars aligned to UTC hours misrepresent trading. | Should | Open |
 | BT-12 | Price queries shall also return the latest N bars per instrument, and let the caller choose how gaps are handled. | Typical charting and backtesting queries. | Should | Partial: the newest bar per instrument can be read |
-| BT-13 | Users shall be able to obtain screener-style metrics per instrument and date (valuation, profitability, growth, dividend, performance, liquidity), as known on that date. | Stock-screener data drives the selection of instruments. | Should | Open |
-| BT-14 | Users shall be able to obtain common technical indicators for instruments. | Standard inputs of strategies and screens. | Should | Open |
+| BT-13 | Users shall be able to obtain screener-style metrics per instrument and date (valuation, profitability, growth, dividend, performance, liquidity), as known on that date. | Stock-screener data drives the selection of instruments; the backtester's scans read these metrics instead of computing them a second time. | Must | Open |
+| BT-14 | Users shall be able to obtain technical indicators of instruments, from a documented set of common ones, as series for every bar interval the system serves, as of a given date: each value computed only from data up to its own point in time, and from prices adjusted as of that date (BT-19). | Standard inputs of strategies, screens and charts; the backtester reads them instead of computing them a second time. All values of a series must be adjusted alike: adjusted as of its own day, a moving average would drop by half at a 2:1 split. | Must | Open |
 | BT-15 | Users shall be able to select the instruments that meet a set of metric conditions on a given date. | Screening is the start of many strategies. | Should | Open |
 | BT-16 | Adding a metric shall not require changing the stored data structure. | The number of useful metrics is open-ended. | Should | Open |
 | BT-17 | A query shall be repeatable later with identical results, by pinning the data state it ran against. | Backtest results must be reproducible. | Should | Open |
-| BT-18 | Trading calendars (sessions, holidays, early closes) shall be available to clients. | The backtester needs them for scheduling and checks. | Could | Open |
+| BT-18 | Trading calendars (sessions, holidays, early closes) shall be available to clients. | The backtester needs them to schedule its events, to know when a bar's values were final, and for checks. | Must | Open |
+| BT-19 | Adjusted prices shall be obtainable as of a given date: adjusted only for the corporate actions effective on or before that date. | A backtest compares them with the prices traded on that date; a later 10:1 split would make them ten times lower. | Must | Open |
 
 ## 4 Querying data (QRY)
 
@@ -111,6 +113,8 @@ Every requirement of the project, implemented or not.
 | QRY-2 | Users shall be able to find out which exchanges, instruments and time ranges the database holds. | Usually the first thing a user needs. | Should | Open |
 | QRY-3 | An instrument shall be identifiable by a single self-contained identifier. | Simpler queries; matches what users write. | Should | Open |
 | QRY-4 | A query for an empty selection shall return an empty result. | Callers shouldn't need special cases. | Should | Partial: a price read for no exchanges returns an empty result; one for an exchange with an empty list of symbols fails |
+| QRY-5 | Clients shall be able to find out for which instruments, data kinds and time ranges data was added, changed or removed after a given point in time. | A client that keeps a copy of the data, e.g. a backtester's cache, must know when the copy is stale. | Should | Open |
+| QRY-6 | Queries of bars, metrics or indicators over many instruments shall be able to return their results in the order of time, all instruments of one point in time before the next. | A backtester replays the market in time order; results ordered by instrument would have to be held in memory completely first. | Should | Open |
 
 ## 5 REST API (API)
 

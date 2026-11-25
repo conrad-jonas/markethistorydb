@@ -232,7 +232,7 @@ of the symbol follow (chapter FUND).
 
 | ID | Specification | Satisfies |
 | -- | ------------- | --------- |
-| PRICES-S04 | **Timestamps:** a daily bar's date becomes 00:00 UTC of that date; a minute bar's Unix seconds become the naive UTC datetime of that instant (`4_design.md`, section 2.3). | COR-10 |
+| PRICES-S04 | **Timestamps:** a daily bar's date becomes 00:00 UTC of that date; a minute bar's Unix seconds become the naive UTC datetime of that instant (`4_design.md`, section 2.3). | COR-10, COR-18 |
 | PRICES-S05 | **Bars before 1970** are dropped before writing, with a warning naming their number, the time frame and the symbol, e.g. "Dropped 1520 DAILY price records of IBM.NYSE from before 1970, which QuestDB cannot store". | COR-9 |
 | PRICES-S06 | The remaining bars are written to the table of the pass's time frame in one batch (STORAGE-S09). A bar whose timestamp, exchange code and symbol code are stored already replaces the stored bar (STORAGE-S04, S05), so repeating a run stores nothing twice. | MKT-4, MKT-5, MKT-6, COR-5 |
 | PRICES-S07 | **No new bars:** if the provider has no bars for the requested period, or the minute data is already up to date, the log says "No data exists for symbol AAPL (NASDAQ, DAILY, ACTIVE)" and nothing is written. If every bar is from before 1970, only the warning of PRICES-S05 is logged and nothing is written. | ING-6 |
@@ -245,6 +245,7 @@ of the symbol follow (chapter FUND).
 | Past bars are never requested again: corrections by the provider don't reach the stored data | COR-12 | `price-corrections` |
 | Bars the provider no longer delivers stay stored | COR-13 | `price-corrections` |
 | Only the provider's adjusted close is stored, as it was at fetch time; no adjustment on read | BT-5, BT-6 | `corporate-actions` |
+| Whether a minute bar's timestamp stands for the start or the end of its minute is not documented | COR-18 | `target-architecture` |
 | A symbol's minute windows are held in memory and written at the end; a failure in window *k* loses windows 1 to *k*−1, and memory grows with the history | ING-13, ING-14 | `ingestion-efficiency` |
 | A new symbol's minute history is requested from 2005 whatever its listing date: about 67 requests per symbol, many of them empty for young symbols | ING-8 | `ingestion-efficiency` |
 | The start date 2005-01-01 and the window length are fixed in the code | OPS-3 | `settings-model` |
