@@ -358,6 +358,7 @@ order. A feature may correct the files of a Ready feature, in a commit of its ow
 | **Corporate action** | An event that changes a share's price history: a split (e.g. 10:1) or a dividend. |
 | **Coverage** | For each instrument and time frame: the first and last stored bar and the row count. |
 | **Cursor pagination** | Paging through a large result by remembering where the last page ended, instead of "skip the first N rows". |
+| **Data state** | The stored data as it was at one moment. A query pinned to a data state returns the same result later, whatever has been stored, corrected or removed since. |
 | **DDL / generated DDL** | Data Definition Language: the SQL that defines tables (`CREATE TABLE`, `ALTER TABLE`, `DROP TABLE`). *Generated* DDL is produced by code from table definitions in Python, instead of being written by hand in `.sql` files. |
 | **DEDUP UPSERT KEYS** | A QuestDB table setting: a row whose key columns equal those of a stored row replaces it. It makes writes repeatable. |
 | **Designated timestamp** | The QuestDB column a table is sorted and partitioned by. Time-series features such as resampling and as-of joins need it. |
