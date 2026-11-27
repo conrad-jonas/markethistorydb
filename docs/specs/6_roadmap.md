@@ -104,7 +104,7 @@ are written once it is decided (section 6.3).
 | DG-1 | Code architecture: the target package layout and its dependency rule (`1_constitution.md`, section 4), with room for a long-running live-data role | `target-architecture` | `provider-interface`, `schema-from-code` | Open |
 | DG-2 | Storage engine: QuestDB alone, together with another database, or another engine; and what would make the choice be reconsidered; including a second, continuously written bar series (LIVE-4) | `target-architecture` | `schema-from-code` | Open |
 | DG-3 | Table layout of the point-in-time fundamentals | `point-in-time-fundamentals` | — | Open |
-| DG-4 | Adjustment method: adjustment factors applied to the raw prices on read, or adjusted prices stored, also for prices adjusted as of a date (BT-19); and whether the provider's adjusted close is kept | `corporate-actions` | `price-corrections` | Open |
+| DG-4 | Adjustment method: adjustment factors applied to the raw prices on read, or adjusted prices stored, also for prices adjusted as of a date (BT-19) and for queries pinned to a data state (BT-17); and whether the provider's adjusted close is kept | `corporate-actions` | `price-corrections` | Open |
 | DG-5 | Metrics and indicators: computed on request or stored, and what is cached | `metrics-and-screens` | — | Open |
 | DG-6 | Formats and paging of large results, and whether QuestDB's export endpoint `/exp` delivers them; with a cursor a client can resume from by time | `query-layer` | `rest-api` | Open |
 | DG-7 | Concurrency of the fetch: threads or asyncio, and how concurrent requests share the provider's rate limit, also across processes | `ingestion-scale` | — | Open |
